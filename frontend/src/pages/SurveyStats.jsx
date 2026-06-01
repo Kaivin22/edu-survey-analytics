@@ -1,10 +1,108 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, FileSpreadsheet, Users, BarChart3, MessageSquare, Award } from 'lucide-react';
+import { ArrowLeft, FileSpreadsheet, FileText, File, ChevronDown, Users, BarChart3, MessageSquare, Award } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-
 const TARGET_LABELS = { Student: 'Sinh viên', Lecturer: 'Giảng viên', Alumnus: 'Cựu sinh viên', Employer: 'Nhà tuyển dụng', All: 'Tất cả' };
+
+const EXPORT_OPTIONS = [
+  { id: 'excel', label: 'Xuất Excel (.xlsx)', icon: FileSpreadsheet, color: '#16a34a', bg: '#f0fdf4', ext: 'excel' },
+  { id: 'word',  label: 'Xuất Word (.docx)',  icon: FileText,        color: '#2563eb', bg: '#eff6ff', ext: 'word'  },
+  { id: 'pdf',   label: 'Xuất PDF (.pdf)',    icon: File,            color: '#dc2626', bg: '#fef2f2', ext: 'pdf'   },
+];
+
+function ExportDropdown({ surveyId, token }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  // Close on outside click
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const handleExport = (ext) => {
+    const url = `${API_URL}/reports/${surveyId}/${ext}`;
+    const a = document.createElement('a');
+    a.href = url;
+    a.setAttribute('Authorization', `Bearer ${token}`);
+    // Use fetch with auth header to trigger download
+    fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+      .then(res => res.blob())
+      .then(blob => {
+        const extMap = { excel: '.xlsx', word: '.docx', pdf: '.pdf' };
+        const blobUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = `bao_cao_khao_sat_${surveyId}${extMap[ext]}`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(blobUrl);
+      })
+      .catch(err => alert('Lỗi tải báo cáo: ' + err.message));
+    setOpen(false);
+  };
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button
+        onClick={() => setOpen(!open)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px',
+          borderRadius: 12, background: '#fff', color: '#6E9AE0',
+          fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.12)', transition: 'box-shadow 0.2s'
+        }}
+        onMouseOver={e => e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.18)'}
+        onMouseOut={e => e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.12)'}
+      >
+        <FileSpreadsheet size={16} />
+        Xuất báo cáo
+        <ChevronDown size={14} style={{ transition: 'transform 0.2s', transform: open ? 'rotate(180deg)' : 'none' }} />
+      </button>
+
+      {open && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 8px)', right: 0,
+          background: '#fff', borderRadius: 16, boxShadow: '0 12px 36px rgba(0,0,0,0.18)',
+          border: '1px solid #D2DBEA', minWidth: 220, zIndex: 50, overflow: 'hidden'
+        }}>
+          <p style={{ padding: '10px 16px 6px', fontSize: 11, fontWeight: 700, color: '#A0AEC0', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            Chọn định dạng xuất
+          </p>
+          {EXPORT_OPTIONS.map(opt => {
+            const Icon = opt.icon;
+            return (
+              <button
+                key={opt.id}
+                onClick={() => handleExport(opt.ext)}
+                style={{
+                  width: '100%', padding: '10px 16px', border: 'none', background: '#fff',
+                  display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer',
+                  textAlign: 'left', transition: 'background 0.15s'
+                }}
+                onMouseOver={e => e.currentTarget.style.background = opt.bg}
+                onMouseOut={e => e.currentTarget.style.background = '#fff'}
+              >
+                <div style={{ width: 34, height: 34, borderRadius: 9, background: opt.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Icon size={18} color={opt.color} />
+                </div>
+                <div>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: '#2d4771', marginBottom: 1 }}>{opt.label}</p>
+                  <p style={{ fontSize: 11, color: '#A0AEC0' }}>
+                    {opt.id === 'excel' ? 'Tất cả phản hồi dạng bảng' : opt.id === 'word' ? 'Báo cáo có cấu trúc bảng biểu' : 'Báo cáo in ấn chuyên nghiệp'}
+                  </p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function SurveyStats({ user }) {
   const { id } = useParams();
@@ -35,7 +133,7 @@ function SurveyStats({ user }) {
     <div className="min-h-screen flex items-center justify-center p-6" style={{ background: '#F9FAFD' }}>
       <div className="p-8 rounded-3xl text-center max-w-sm border" style={{ background: '#fff', borderColor: '#D2DBEA' }}>
         <p className="font-bold mb-4" style={{ color: '#2d4771' }}>{error || 'Không thể tải báo cáo.'}</p>
-        <button onClick={() => navigate('/')} className="px-5 py-2.5 text-white font-bold rounded-2xl" style={{ background: '#6E9AE0' }}>Quay về</button>
+        <button onClick={() => navigate('/dashboard')} className="px-5 py-2.5 text-white font-bold rounded-2xl" style={{ background: '#6E9AE0' }}>Quay về</button>
       </div>
     </div>
   );
@@ -47,7 +145,7 @@ function SurveyStats({ user }) {
       <nav className="sticky top-0 z-30 shadow-sm" style={{ background: 'linear-gradient(135deg, #6E9AE0, #487bc9)' }}>
         <div className="max-w-5xl mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <button onClick={() => navigate('/')} className="p-2 bg-white/20 hover:bg-white/30 rounded-xl text-white transition-all">
+            <button onClick={() => navigate('/dashboard')} className="p-2 bg-white/20 hover:bg-white/30 rounded-xl text-white transition-all">
               <ArrowLeft size={16} />
             </button>
             <div>
@@ -55,14 +153,9 @@ function SurveyStats({ user }) {
               <h2 className="text-sm font-extrabold text-white leading-tight max-w-sm md:max-w-xl line-clamp-1">{stats.surveyTitle}</h2>
             </div>
           </div>
-          <a
-            href={`${API_URL}/reports/${id}/excel`}
-            target="_blank" rel="noreferrer"
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all"
-            style={{ background: '#fff', color: '#6E9AE0' }}
-          >
-            <FileSpreadsheet size={16} />Xuất Excel
-          </a>
+
+          {/* Export Dropdown */}
+          <ExportDropdown surveyId={id} token={token} />
         </div>
       </nav>
 
@@ -113,13 +206,12 @@ function SurveyStats({ user }) {
                   </div>
                 </div>
 
-                {/* ─ LIKERT STATS ─ */}
+                {/* LIKERT */}
                 {q.type === 'likert_scale' && (
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-center">
                     <div className="flex flex-col items-center justify-center p-4 rounded-2xl text-center" style={{ background: '#EEF4FD' }}>
                       <span className="text-4xl font-black" style={{ color: '#6E9AE0' }}>{q.data.average}</span>
                       <span className="text-xs font-bold uppercase mt-1" style={{ color: '#487bc9' }}>Điểm TB / 5.0</span>
-                      {/* Star visual */}
                       <div className="mt-2 flex gap-0.5">
                         {[1,2,3,4,5].map(s => (
                           <span key={s} style={{ color: s <= Math.round(q.data.average) ? '#FBECAC' : '#D2DBEA', fontSize: '16px' }}>★</span>
@@ -145,7 +237,7 @@ function SurveyStats({ user }) {
                   </div>
                 )}
 
-                {/* ─ CHOICE STATS ─ */}
+                {/* CHOICE */}
                 {['single_choice', 'multiple_choice'].includes(q.type) && (
                   <div className="space-y-3.5">
                     {Object.entries(q.data.options || {}).map(([text, count]) => {
@@ -165,7 +257,7 @@ function SurveyStats({ user }) {
                   </div>
                 )}
 
-                {/* ─ OPEN TEXT ─ */}
+                {/* OPEN TEXT */}
                 {q.type === 'open_text' && (
                   <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
                     {q.data.comments.length === 0
@@ -179,7 +271,6 @@ function SurveyStats({ user }) {
                     }
                   </div>
                 )}
-
               </div>
             ))}
           </div>

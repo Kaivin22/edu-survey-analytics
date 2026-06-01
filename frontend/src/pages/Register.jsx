@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { UserPlus, Mail, Lock, User, Briefcase, Award } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const LOGIN_VIDEO = 'https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260331_074327_a4d6275d-82d9-4c83-bfbe-f1fb2213c17c.mp4';
 
 const inputStyle = {
   background: '#F9FAFD',
@@ -62,10 +63,15 @@ function Register() {
   const inputClass = "w-full pl-11 pr-4 py-2.5 rounded-2xl border text-sm font-medium outline-none transition-all";
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: '#F9FAFD' }}>
-      <div className="fixed top-1/3 right-0 w-72 h-72 rounded-full opacity-15 translate-x-1/3" style={{ background: 'radial-gradient(circle, #6E9AE0, transparent)' }} />
+    <div style={{ minHeight: '100vh', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', fontFamily: "'Outfit', 'Inter', sans-serif" }}>
+      {/* Video background */}
+      <video autoPlay loop muted playsInline
+        style={{ position: 'fixed', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0 }}
+        src={LOGIN_VIDEO}
+      />
+      <div style={{ position: 'fixed', inset: 0, background: 'linear-gradient(135deg, rgba(0,43,110,0.78) 0%, rgba(110,154,224,0.60) 50%, rgba(0,67,174,0.75) 100%)', zIndex: 1 }} />
 
-      <div className="w-full max-w-lg rounded-3xl shadow-xl p-8 relative z-10 border" style={{ background: 'rgba(255,255,255,0.92)', borderColor: 'rgba(110,154,224,0.2)' }}>
+      <div className="w-full max-w-lg rounded-3xl shadow-xl p-8" style={{ background: 'rgba(255,255,255,0.97)', borderColor: 'rgba(110,154,224,0.2)', position: 'relative', zIndex: 2 }}>
 
         <div className="flex flex-col items-center mb-6">
           <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white shadow-lg mb-3" style={{ background: 'linear-gradient(135deg, #6E9AE0, #487bc9)' }}>
@@ -121,6 +127,10 @@ function Register() {
           Đã có tài khoản?{' '}<Link to="/login" className="font-bold underline" style={{ color: '#2d4771' }}>Đăng nhập ngay</Link>
         </div>
       </div>
+
+      <p style={{ textAlign: 'center', marginTop: 20, color: 'rgba(255,255,255,0.6)', fontSize: 13, position: 'relative', zIndex: 2 }}>
+        © 2026 Academic Synergy
+      </p>
     </div>
   );
 }
