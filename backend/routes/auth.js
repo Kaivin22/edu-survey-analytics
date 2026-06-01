@@ -129,6 +129,57 @@ router.get('/profile', authenticateToken, async (req, res) => {
   }
 });
 
+// Update User Profile
+router.put('/profile', authenticateToken, async (req, res) => {
+  try {
+    const { fullName, code, currentPassword, newPassword } = req.body;
+    const user = await User.findByPk(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: 'Người dùng không tồn tại.' });
+    }
+
+    if (newPassword) {
+      if (demoEmails.includes(user.email.toLowerCase())) {
+        return res.status(400).json({ message: 'Không thể đổi mật khẩu cho tài khoản demo.' });
+      }
+      if (!currentPassword) {
+        return res.status(400).json({ message: 'Vui lòng nhập mật khẩu hiện tại để đổi mật khẩu mới.' });
+      }
+      const isMatch = await bcrypt.compare(currentPassword, user.password);
+      if (!isMatch) {
+        return res.status(400).json({ message: 'Mật khẩu hiện tại không chính xác.' });
+      }
+      if (newPassword.length < 8) {
+        return res.status(400).json({ message: 'Mật khẩu mới phải từ 8 ký tự trở lên.' });
+      }
+      user.password = await bcrypt.hash(newPassword, 10);
+    }
+
+    if (fullName) user.fullName = fullName;
+    if (code !== undefined) user.code = code;
+    await user.save();
+
+    const updatedUser = await User.findByPk(user.id, {
+      attributes: { exclude: ['password'] },
+      include: [{ model: Role, as: 'role' }]
+    });
+
+    res.json({
+      message: 'Cập nhật thông tin cá nhân thành công!',
+      user: {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        fullName: updatedUser.fullName,
+        code: updatedUser.code,
+        role: updatedUser.role.name
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Lỗi máy chủ khi cập nhật hồ sơ cá nhân.', error: error.message });
+  }
+});
+
+
 // 5. Change Password
 router.post('/change-password', authenticateToken, async (req, res) => {
   try {
