@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
-import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import Dashboard from './pages/Dashboard';
 import AdminDashboard from './pages/AdminDashboard';
@@ -61,11 +60,11 @@ function App() {
         {/* ── Auth pages ── */}
         <Route
           path="/login"
-          element={user ? <Navigate to="/dashboard" replace /> : <Login onLogin={login} />}
+          element={user ? <Navigate to="/dashboard" replace /> : <Login onLogin={login} initialTab="login" />}
         />
         <Route
           path="/register"
-          element={user ? <Navigate to="/dashboard" replace /> : <Register />}
+          element={user ? <Navigate to="/dashboard" replace /> : <Login onLogin={login} initialTab="register" />}
         />
         <Route
           path="/forgot-password"

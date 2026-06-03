@@ -21,7 +21,7 @@ router.get('/roles', async (req, res) => {
 // 2. Register
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, fullName, code, roleId } = req.body;
+    const { email, password, fullName, code, roleId, school, department, class: classVal } = req.body;
 
     if (!email || !password || !fullName || !roleId) {
       return res.status(400).json({ message: 'Vui lòng cung cấp đầy đủ thông tin bắt buộc.' });
@@ -43,7 +43,10 @@ router.post('/register', async (req, res) => {
       password: hashedPassword,
       fullName,
       code,
-      roleId
+      roleId,
+      school,
+      department,
+      class: classVal
     });
 
     res.status(201).json({
@@ -53,7 +56,10 @@ router.post('/register', async (req, res) => {
         email: newUser.email,
         fullName: newUser.fullName,
         code: newUser.code,
-        role: role.name
+        role: role.name,
+        school: newUser.school,
+        department: newUser.department,
+        class: newUser.class
       }
     });
   } catch (error) {
@@ -92,7 +98,7 @@ router.post('/login', async (req, res) => {
         role: user.role.name
       },
       JWT_SECRET,
-      { expiresIn: '7d' } // 7 days expiration
+      { expiresIn: '7d' }
     );
 
     res.json({
@@ -103,7 +109,10 @@ router.post('/login', async (req, res) => {
         email: user.email,
         fullName: user.fullName,
         code: user.code,
-        role: user.role.name
+        role: user.role.name,
+        school: user.school,
+        department: user.department,
+        class: user.class
       }
     });
   } catch (error) {
@@ -132,7 +141,7 @@ router.get('/profile', authenticateToken, async (req, res) => {
 // Update User Profile
 router.put('/profile', authenticateToken, async (req, res) => {
   try {
-    const { fullName, code, currentPassword, newPassword } = req.body;
+    const { fullName, code, currentPassword, newPassword, school, department, class: classVal } = req.body;
     const user = await User.findByPk(req.user.id);
     if (!user) {
       return res.status(404).json({ message: 'Người dùng không tồn tại.' });
@@ -157,6 +166,10 @@ router.put('/profile', authenticateToken, async (req, res) => {
 
     if (fullName) user.fullName = fullName;
     if (code !== undefined) user.code = code;
+    if (school !== undefined) user.school = school;
+    if (department !== undefined) user.department = department;
+    if (classVal !== undefined) user.class = classVal;
+    
     await user.save();
 
     const updatedUser = await User.findByPk(user.id, {
@@ -171,7 +184,10 @@ router.put('/profile', authenticateToken, async (req, res) => {
         email: updatedUser.email,
         fullName: updatedUser.fullName,
         code: updatedUser.code,
-        role: updatedUser.role.name
+        role: updatedUser.role.name,
+        school: updatedUser.school,
+        department: updatedUser.department,
+        class: updatedUser.class
       }
     });
   } catch (error) {
@@ -346,11 +362,10 @@ router.post('/reset-password', async (req, res) => {
     res.status(500).json({ message: 'Lỗi máy chủ khi đặt lại mật khẩu.', error: error.message });
   }
 });
-
-// 8. Google Sign-In (Mock Flow)
+// 8. Google Sign-In
 router.post('/google-login', async (req, res) => {
   try {
-    const { email, name, roleName } = req.body;
+    const { email, name } = req.body;
     if (!email || !name) {
       return res.status(400).json({ message: 'Thông tin đăng nhập Google thiếu email hoặc họ tên.' });
     }
@@ -361,26 +376,7 @@ router.post('/google-login', async (req, res) => {
     });
 
     if (!user) {
-      // Find role or default to Student (roleId: 3)
-      let role = await Role.findOne({ where: { name: roleName || 'Student' } });
-      if (!role) {
-        role = await Role.findOne({ where: { name: 'Student' } });
-      }
-
-      // Create new user automatically for first time Google sign-in
-      const randomPassword = await bcrypt.hash(Math.random().toString(36).substring(2, 10), 10);
-      user = await User.create({
-        email,
-        password: randomPassword,
-        fullName: name,
-        code: 'GG-' + Math.floor(100000 + Math.random() * 900000),
-        roleId: role.id
-      });
-
-      // Refetch with role association
-      user = await User.findByPk(user.id, {
-        include: [{ model: Role, as: 'role' }]
-      });
+      return res.json({ isNewUser: true, email, name });
     }
 
     const token = jwt.sign(
@@ -402,12 +398,76 @@ router.post('/google-login', async (req, res) => {
         email: user.email,
         fullName: user.fullName,
         code: user.code,
-        role: user.role.name
+        role: user.role.name,
+        school: user.school,
+        department: user.department,
+        class: user.class
       }
     });
 
   } catch (error) {
     res.status(500).json({ message: 'Lỗi máy chủ khi đăng nhập Google.', error: error.message });
+  }
+});
+
+// 9. Google Register (Complete Information)
+router.post('/google-register', async (req, res) => {
+  try {
+    const { email, name, roleId, school, department, class: classVal, code } = req.body;
+    if (!email || !name || !roleId) {
+      return res.status(400).json({ message: 'Thông tin đăng ký Google thiếu email, họ tên hoặc vai trò.' });
+    }
+
+    const existingUser = await User.findOne({ where: { email } });
+    if (existingUser) {
+      return res.status(400).json({ message: 'Tài khoản email này đã được đăng ký.' });
+    }
+
+    const role = await Role.findByPk(roleId);
+    if (!role) {
+      return res.status(400).json({ message: 'Vai trò không hợp lệ.' });
+    }
+
+    // Create user with a secure random password
+    const randomPassword = await bcrypt.hash(Math.random().toString(36).substring(2, 10), 10);
+    const newUser = await User.create({
+      email,
+      password: randomPassword,
+      fullName: name,
+      code,
+      roleId,
+      school,
+      department,
+      class: classVal
+    });
+
+    const token = jwt.sign(
+      {
+        id: newUser.id,
+        email: newUser.email,
+        fullName: newUser.fullName,
+        role: role.name
+      },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.status(201).json({
+      message: 'Đăng ký tài khoản Google thành công!',
+      token,
+      user: {
+        id: newUser.id,
+        email: newUser.email,
+        fullName: newUser.fullName,
+        code: newUser.code,
+        role: role.name,
+        school: newUser.school,
+        department: newUser.department,
+        class: newUser.class
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Lỗi máy chủ khi đăng ký tài khoản Google.', error: error.message });
   }
 });
 

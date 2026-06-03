@@ -36,12 +36,34 @@ router.get('/', authenticateToken, async (req, res) => {
       }));
       return res.json(formatted);
     } else {
-      // Find surveys targetting this role or 'All'
+      // Find the logged-in user to filter surveys targeted to their school/dept/class
+      const user = await User.findByPk(userId);
+      const { Op } = require('sequelize');
+
+      const surveyWhere = {
+        status: 'Active',
+        targetAudience: [userRole, 'All']
+      };
+
+      if (user) {
+        // Filter: survey must match user's school or be null (global)
+        surveyWhere.school = {
+          [Op.or]: [null, user.school]
+        };
+        // Filter: survey must match user's department or be null
+        surveyWhere.department = {
+          [Op.or]: [null, user.department]
+        };
+        // Filter: for students, survey must match user's class or be null
+        if (userRole === 'Student') {
+          surveyWhere.class = {
+            [Op.or]: [null, user.class]
+          };
+        }
+      }
+
       const surveys = await Survey.findAll({
-        where: {
-          status: 'Active',
-          targetAudience: [userRole, 'All']
-        },
+        where: surveyWhere,
         include: [{ model: Question, attributes: ['id'] }],
         order: [['createdAt', 'DESC']]
       });
@@ -110,7 +132,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
 router.post('/', authenticateToken, authorizeRoles('Admin'), async (req, res) => {
   const transaction = await sequelize.transaction();
   try {
-    const { title, description, targetAudience, status, startDate, endDate, questions } = req.body;
+    const { title, description, targetAudience, status, startDate, endDate, questions, school, department, class: classVal } = req.body;
 
     if (!title || !targetAudience) {
       return res.status(400).json({ message: 'Tiêu đề và đối tượng khảo sát là bắt buộc.' });
@@ -123,7 +145,10 @@ router.post('/', authenticateToken, authorizeRoles('Admin'), async (req, res) =>
       status: status || 'Draft',
       startDate: startDate || new Date(),
       endDate: endDate || null,
-      createdBy: req.user.id
+      createdBy: req.user.id,
+      school: school || null,
+      department: department || null,
+      class: classVal || null
     }, { transaction });
 
     if (questions && Array.isArray(questions)) {
@@ -161,7 +186,7 @@ router.post('/', authenticateToken, authorizeRoles('Admin'), async (req, res) =>
 router.put('/:id', authenticateToken, authorizeRoles('Admin'), async (req, res) => {
   const transaction = await sequelize.transaction();
   try {
-    const { title, description, targetAudience, status, startDate, endDate, questions } = req.body;
+    const { title, description, targetAudience, status, startDate, endDate, questions, school, department, class: classVal } = req.body;
     const surveyId = req.params.id;
 
     const survey = await Survey.findByPk(surveyId);
@@ -176,7 +201,10 @@ router.put('/:id', authenticateToken, authorizeRoles('Admin'), async (req, res) 
       targetAudience,
       status,
       startDate,
-      endDate
+      endDate,
+      school: school || null,
+      department: department || null,
+      class: classVal || null
     }, { transaction });
 
     // Handle questions. Easy method: delete old questions and options, insert new ones.
@@ -298,6 +326,8 @@ router.post('/:id/submit', authenticateToken, async (req, res) => {
 router.get('/:id/stats', authenticateToken, authorizeRoles(['Admin', 'Manager']), async (req, res) => {
   try {
     const surveyId = req.params.id;
+    const { school, department, class: classVal } = req.query;
+
     const survey = await Survey.findByPk(surveyId, {
       include: [
         {
@@ -312,15 +342,35 @@ router.get('/:id/stats', authenticateToken, authorizeRoles(['Admin', 'Manager'])
       return res.status(404).json({ message: 'Không tìm thấy cuộc khảo sát.' });
     }
 
-    // Count total responses
-    const totalResponses = await Response.count({ where: { surveyId } });
+    // Filter responses based on school, department, class
+    const responseWhere = { surveyId };
+    const userWhere = {};
+    if (school) userWhere.school = school;
+    if (department) userWhere.department = department;
+    if (classVal) userWhere.class = classVal;
+
+    const matchingResponses = await Response.findAll({
+      where: responseWhere,
+      include: [{
+        model: User,
+        as: 'respondent',
+        where: Object.keys(userWhere).length > 0 ? userWhere : undefined,
+        required: Object.keys(userWhere).length > 0
+      }]
+    });
+
+    const responseIds = matchingResponses.map(r => r.id);
+    const totalResponses = responseIds.length;
 
     const stats = [];
 
     for (let question of survey.Questions) {
-      const answers = await Answer.findAll({
-        where: { questionId: question.id }
-      });
+      const answers = totalResponses > 0 ? await Answer.findAll({
+        where: {
+          questionId: question.id,
+          responseId: responseIds
+        }
+      }) : [];
 
       const questionStat = {
         id: question.id,
@@ -387,6 +437,9 @@ router.get('/:id/stats', authenticateToken, authorizeRoles(['Admin', 'Manager'])
       surveyTitle: survey.title,
       description: survey.description,
       targetAudience: survey.targetAudience,
+      school: survey.school,
+      department: survey.department,
+      class: survey.class,
       totalResponses,
       stats
     });

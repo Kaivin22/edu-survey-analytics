@@ -1,10 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { LogOut, ClipboardList, Bell, User, Calendar, FileText, CheckCircle, Clock, Lock } from 'lucide-react';
+import { LogOut, ClipboardList, Bell, User, Calendar, FileText, CheckCircle, Clock, School } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-const ROLE_LABELS = { Student: 'Sinh viên', Lecturer: 'Giảng viên', Alumnus: 'Cựu sinh viên', Employer: 'Nhà tuyển dụng' };
+const ROLE_LABELS = { Student: 'Sinh viên', Lecturer: 'Giảng viên', Alumnus: 'Cựu sinh viên', Employer: 'Nhà tuyển dụng', Admin: 'Quản trị viên', Manager: 'Cán bộ quản lý' };
+
+const SCHOOLS = {
+  'DAU': { label: 'Kiến trúc Đà Nẵng (DAU)', departments: ['Kiến trúc', 'Quy hoạch đô thị', 'Nội thất', 'Mỹ thuật công nghiệp', 'Xây dựng'] },
+  'VKU': { label: 'Việt Hàn (VKU)',           departments: ['Công nghệ thông tin', 'Kỹ thuật máy tính', 'Điện tử viễn thông', 'Thương mại điện tử', 'Quản trị kinh doanh'] },
+};
 
 function Dashboard({ user, onLogout, onUpdateUser }) {
   const [surveys, setSurveys] = useState([]);
@@ -121,6 +126,7 @@ function Dashboard({ user, onLogout, onUpdateUser }) {
                     <p className="font-semibold" style={{ color: '#2d4771' }}>{user.code || 'N/A'}</p>
                   </div>
                 </div>
+
                 <div className="flex items-center gap-2">
                   <Calendar size={15} style={{ color: '#6E9AE0' }} />
                   <div>
@@ -128,6 +134,36 @@ function Dashboard({ user, onLogout, onUpdateUser }) {
                     <p className="font-semibold text-xs text-break" style={{ color: '#2d4771' }}>{user.email}</p>
                   </div>
                 </div>
+
+                {user.school && (
+                  <div className="flex items-center gap-2">
+                    <School size={15} style={{ color: '#6E9AE0' }} />
+                    <div>
+                      <p className="text-xs uppercase font-bold" style={{ color: '#A0AEC0' }}>Trường học</p>
+                      <p className="font-semibold" style={{ color: '#2d4771' }}>{SCHOOLS[user.school]?.label || user.school}</p>
+                    </div>
+                  </div>
+                )}
+
+                {user.department && (
+                  <div className="flex items-center gap-2">
+                    <ClipboardList size={15} style={{ color: '#6E9AE0' }} />
+                    <div>
+                      <p className="text-xs uppercase font-bold" style={{ color: '#A0AEC0' }}>Khoa / Phòng</p>
+                      <p className="font-semibold" style={{ color: '#2d4771' }}>{user.department}</p>
+                    </div>
+                  </div>
+                )}
+
+                {user.class && (
+                  <div className="flex items-center gap-2">
+                    <User size={15} style={{ color: '#6E9AE0' }} />
+                    <div>
+                      <p className="text-xs uppercase font-bold" style={{ color: '#A0AEC0' }}>Lớp học</p>
+                      <p className="font-semibold" style={{ color: '#2d4771' }}>{user.class}</p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -229,6 +265,9 @@ function ProfileEditForm({ user, API_URL, token, onUpdateUser }) {
   const [form, setForm] = useState({
     fullName: user.fullName || '',
     code: user.code || '',
+    school: user.school || '',
+    department: user.department || '',
+    class: user.class || '',
     currentPassword: '',
     newPassword: '',
     confirmPassword: ''
@@ -257,6 +296,9 @@ function ProfileEditForm({ user, API_URL, token, onUpdateUser }) {
         body: JSON.stringify({
           fullName: form.fullName.trim(),
           code: form.code.trim(),
+          school: form.school || null,
+          department: form.department || null,
+          class: form.class || null,
           currentPassword: form.newPassword ? form.currentPassword : undefined,
           newPassword: form.newPassword || undefined
         })
@@ -283,7 +325,7 @@ function ProfileEditForm({ user, API_URL, token, onUpdateUser }) {
   const inputStyle = { background: '#F9FAFD', borderColor: '#D2DBEA', color: '#2d4771' };
 
   return (
-    <div className="rounded-3xl shadow-sm p-8 border max-w-xl animate-fade-in" style={{ background: '#fff', borderColor: '#D2DBEA' }}>
+    <div className="rounded-3xl shadow-sm p-8 border max-w-2xl animate-fade-in" style={{ background: '#fff', borderColor: '#D2DBEA' }}>
       <h2 className="text-xl font-extrabold mb-1" style={{ color: '#2d4771' }}>Thông Tin Cá Nhân</h2>
       <p className="text-xs mb-6" style={{ color: '#6E9AE0' }}>Cập nhật thông tin tài khoản và đổi mật khẩu</p>
 
@@ -326,6 +368,51 @@ function ProfileEditForm({ user, API_URL, token, onUpdateUser }) {
               type="text" placeholder="Nhập mã số"
               value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value }))}
               className="w-full px-4 py-2.5 rounded-2xl border text-sm font-medium outline-none"
+              style={inputStyle}
+            />
+          </div>
+        </div>
+
+        {/* School/Department/Class target picker */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-dashed" style={{ borderColor: '#D2DBEA' }}>
+          <div>
+            <label className="block text-sm font-semibold mb-1 ml-1" style={{ color: '#2d4771' }}>Trường học</label>
+            <select
+              value={form.school}
+              onChange={e => setForm(f => ({ ...f, school: e.target.value, department: '', class: '' }))}
+              className="w-full px-4 py-2.5 rounded-2xl border text-sm font-bold outline-none"
+              style={inputStyle}
+            >
+              <option value="">Chọn trường...</option>
+              {Object.entries(SCHOOLS).map(([k, v]) => (
+                <option key={k} value={k}>{v.label}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-semibold mb-1 ml-1" style={{ color: '#2d4771' }}>Khoa / Phòng</label>
+            <select
+              value={form.department}
+              disabled={!form.school}
+              onChange={e => setForm(f => ({ ...f, department: e.target.value, class: '' }))}
+              className="w-full px-4 py-2.5 rounded-2xl border text-sm font-bold outline-none disabled:opacity-50"
+              style={inputStyle}
+            >
+              <option value="">Chọn khoa...</option>
+              {(SCHOOLS[form.school]?.departments || []).map(d => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-semibold mb-1 ml-1" style={{ color: '#2d4771' }}>Lớp học</label>
+            <input
+              type="text"
+              placeholder="VD: 21IT1"
+              disabled={!form.department || user.role !== 'Student'}
+              value={form.class}
+              onChange={e => setForm(f => ({ ...f, class: e.target.value }))}
+              className="w-full px-4 py-2.5 rounded-2xl border text-sm font-medium outline-none disabled:opacity-50"
               style={inputStyle}
             />
           </div>

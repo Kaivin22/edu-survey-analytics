@@ -18,8 +18,8 @@ const {
 } = require('../models');
 const { authenticateToken, authorizeRoles } = require('../middleware/auth');
 
-// Helper: Get survey data with responses
-async function getSurveyData(surveyId) {
+// Helper: Get survey data with responses (with school/dept/class filters)
+async function getSurveyData(surveyId, filters = {}) {
   const survey = await Survey.findByPk(surveyId, {
     include: [
       {
@@ -30,10 +30,22 @@ async function getSurveyData(surveyId) {
     ]
   });
 
+  const responseWhere = { surveyId };
+  const userWhere = {};
+  if (filters.school) userWhere.school = filters.school;
+  if (filters.department) userWhere.department = filters.department;
+  if (filters.class) userWhere.class = filters.class;
+
   const responses = await Response.findAll({
-    where: { surveyId },
+    where: responseWhere,
     include: [
-      { model: User, as: 'respondent', attributes: ['code', 'fullName', 'email'] },
+      { 
+        model: User, 
+        as: 'respondent', 
+        attributes: ['code', 'fullName', 'email', 'school', 'department', 'class'],
+        where: Object.keys(userWhere).length > 0 ? userWhere : undefined,
+        required: Object.keys(userWhere).length > 0
+      },
       { model: Answer, as: 'answers', include: [{ model: Question, as: 'question' }] }
     ],
     order: [['submittedAt', 'ASC']]
@@ -70,7 +82,8 @@ function getAnswerText(ans, q) {
 // ─────────────────────────────────────────────────────────
 router.get('/:surveyId/excel', authenticateToken, authorizeRoles(['Admin', 'Manager']), async (req, res) => {
   try {
-    const { survey, responses } = await getSurveyData(req.params.surveyId);
+    const { school, department, class: classVal } = req.query;
+    const { survey, responses } = await getSurveyData(req.params.surveyId, { school, department, class: classVal });
     if (!survey) return res.status(404).json({ message: 'Không tìm thấy cuộc khảo sát này.' });
 
     const workbook = new ExcelJS.Workbook();
@@ -150,7 +163,8 @@ router.get('/:surveyId/excel', authenticateToken, authorizeRoles(['Admin', 'Mana
 // ─────────────────────────────────────────────────────────
 router.get('/:surveyId/word', authenticateToken, authorizeRoles(['Admin', 'Manager']), async (req, res) => {
   try {
-    const { survey, responses } = await getSurveyData(req.params.surveyId);
+    const { school, department, class: classVal } = req.query;
+    const { survey, responses } = await getSurveyData(req.params.surveyId, { school, department, class: classVal });
     if (!survey) return res.status(404).json({ message: 'Không tìm thấy cuộc khảo sát này.' });
 
     const questionsSorted = [...survey.Questions].sort((a, b) => a.order - b.order);
@@ -284,7 +298,8 @@ router.get('/:surveyId/word', authenticateToken, authorizeRoles(['Admin', 'Manag
 // ─────────────────────────────────────────────────────────
 router.get('/:surveyId/pdf', authenticateToken, authorizeRoles(['Admin', 'Manager']), async (req, res) => {
   try {
-    const { survey, responses } = await getSurveyData(req.params.surveyId);
+    const { school, department, class: classVal } = req.query;
+    const { survey, responses } = await getSurveyData(req.params.surveyId, { school, department, class: classVal });
     if (!survey) return res.status(404).json({ message: 'Không tìm thấy cuộc khảo sát này.' });
 
     const questionsSorted = [...survey.Questions].sort((a, b) => a.order - b.order);
