@@ -1,12 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { LogOut, ClipboardList, Bell, User, Calendar, FileText, CheckCircle, Clock, Lock } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { LogOut, ClipboardList, Bell, User, Calendar, FileText, CheckCircle, Clock, School } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-const ROLE_LABELS = { Student: 'Sinh viên', Lecturer: 'Giảng viên', Alumnus: 'Cựu sinh viên', Employer: 'Nhà tuyển dụng' };
+const ROLE_LABELS = { Student: 'Sinh viên', Lecturer: 'Giảng viên', Alumnus: 'Cựu sinh viên', Employer: 'Nhà tuyển dụng', Admin: 'Quản trị viên', Manager: 'Cán bộ quản lý' };
 
-function Dashboard({ user, onLogout }) {
+const SCHOOLS = {
+  'DAU': { label: 'Kiến trúc Đà Nẵng (DAU)', departments: ['Kiến trúc', 'Quy hoạch đô thị', 'Nội thất', 'Mỹ thuật công nghiệp', 'Xây dựng'] },
+  'VKU': { label: 'Việt Hàn (VKU)',           departments: ['Công nghệ thông tin', 'Kỹ thuật máy tính', 'Điện tử viễn thông', 'Thương mại điện tử', 'Quản trị kinh doanh'] },
+};
+
+function Dashboard({ user, onLogout, onUpdateUser }) {
   const [surveys, setSurveys] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -40,17 +45,22 @@ function Dashboard({ user, onLogout }) {
   };
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#F9FAFD' }}>
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#F9FAFD', fontFamily: "'Outfit', 'Inter', sans-serif" }}>
 
       {/* ─── Navbar ─── */}
       <nav className="sticky top-0 z-30 shadow-sm" style={{ background: 'linear-gradient(135deg, #6E9AE0, #487bc9)' }}>
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center text-white"><ClipboardList size={20} /></div>
+            <Link to="/dashboard" className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center text-white text-decoration-none"><ClipboardList size={20} /></Link>
             <span className="text-xl font-extrabold text-white tracking-tight">EDU SURVEY</span>
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Quay lại Trang chủ */}
+            <Link to="/" className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold bg-white/15 hover:bg-white/25 text-white transition-all text-decoration-none">
+              🏠 Trang chủ
+            </Link>
+
             {/* Bell */}
             <div className="relative">
               <button
@@ -66,7 +76,7 @@ function Dashboard({ user, onLogout }) {
               </button>
 
               {showNotif && (
-                <div className="absolute right-0 mt-2 w-80 rounded-2xl shadow-xl border p-4 z-50" style={{ background: '#fff', borderColor: '#D2DBEA' }}>
+                <div className="absolute right-0 mt-2 w-80 rounded-2xl shadow-xl border p-4 z-50 animate-fade-in" style={{ background: '#fff', borderColor: '#D2DBEA' }}>
                   <h4 className="font-bold text-sm mb-3" style={{ color: '#2d4771' }}>Thông báo gần đây</h4>
                   <div className="space-y-2 max-h-56 overflow-y-auto">
                     {notifications.length === 0
@@ -116,13 +126,44 @@ function Dashboard({ user, onLogout }) {
                     <p className="font-semibold" style={{ color: '#2d4771' }}>{user.code || 'N/A'}</p>
                   </div>
                 </div>
+
                 <div className="flex items-center gap-2">
                   <Calendar size={15} style={{ color: '#6E9AE0' }} />
                   <div>
                     <p className="text-xs uppercase font-bold" style={{ color: '#A0AEC0' }}>Email</p>
-                    <p className="font-semibold text-xs" style={{ color: '#2d4771' }}>{user.email}</p>
+                    <p className="font-semibold text-xs text-break" style={{ color: '#2d4771' }}>{user.email}</p>
                   </div>
                 </div>
+
+                {user.school && (
+                  <div className="flex items-center gap-2">
+                    <School size={15} style={{ color: '#6E9AE0' }} />
+                    <div>
+                      <p className="text-xs uppercase font-bold" style={{ color: '#A0AEC0' }}>Trường học</p>
+                      <p className="font-semibold" style={{ color: '#2d4771' }}>{SCHOOLS[user.school]?.label || user.school}</p>
+                    </div>
+                  </div>
+                )}
+
+                {user.department && (
+                  <div className="flex items-center gap-2">
+                    <ClipboardList size={15} style={{ color: '#6E9AE0' }} />
+                    <div>
+                      <p className="text-xs uppercase font-bold" style={{ color: '#A0AEC0' }}>Khoa / Phòng</p>
+                      <p className="font-semibold" style={{ color: '#2d4771' }}>{user.department}</p>
+                    </div>
+                  </div>
+                )}
+
+                {user.class && (
+                  <div className="flex items-center gap-2">
+                    <User size={15} style={{ color: '#6E9AE0' }} />
+                    <div>
+                      <p className="text-xs uppercase font-bold" style={{ color: '#A0AEC0' }}>Lớp học</p>
+                      <p className="font-semibold" style={{ color: '#2d4771' }}>{user.class}</p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -131,7 +172,7 @@ function Dashboard({ user, onLogout }) {
           <div className="rounded-2xl p-3 space-y-1 border" style={{ background: '#fff', borderColor: '#D2DBEA' }}>
             {[
               { key: 'surveys', icon: ClipboardList, label: 'Khảo sát của tôi' },
-              { key: 'password', icon: Lock, label: 'Đổi mật khẩu' },
+              { key: 'profile', icon: User, label: 'Thông tin cá nhân' },
             ].map(({ key, icon: Icon, label }) => (
               <button
                 key={key}
@@ -162,7 +203,7 @@ function Dashboard({ user, onLogout }) {
 
               {loading ? (
                 <div className="h-56 flex items-center justify-center">
-                  <div className="w-10 h-10 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: '#6E9AE0', borderTopColor: 'transparent' }} />
+                  <div className="w-10 h-10 border-2 border-t-transparent rounded-full animate-spin animate-spin-slow" style={{ borderColor: '#6E9AE0', borderTopColor: 'transparent' }} />
                 </div>
               ) : surveys.length === 0 ? (
                 <div className="p-12 rounded-3xl text-center border-2 border-dashed" style={{ borderColor: '#D2DBEA' }}>
@@ -206,66 +247,221 @@ function Dashboard({ user, onLogout }) {
               )}
             </div>
           ) : (
-            <PasswordChangeForm API_URL={API_URL} token={token} />
+            <ProfileEditForm user={user} API_URL={API_URL} token={token} onUpdateUser={onUpdateUser} />
           )}
         </div>
       </main>
+
+      <style>{`
+        .text-break { word-break: break-all; }
+        .animate-spin-slow { animation: spin 1.2s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      `}</style>
     </div>
   );
 }
 
-function PasswordChangeForm({ API_URL, token }) {
-  const [form, setForm] = useState({ old: '', newP: '', confirm: '' });
+function ProfileEditForm({ user, API_URL, token, onUpdateUser }) {
+  const [form, setForm] = useState({
+    fullName: user.fullName || '',
+    code: user.code || '',
+    school: user.school || '',
+    department: user.department || '',
+    class: user.class || '',
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const isDemo = ['admin@edu.vn', 'manager@edu.vn', 'student1@edu.vn', 'student2@edu.vn', 'lecturer1@edu.vn', 'alumnus1@edu.vn', 'employer1@edu.vn'].includes(user.email.toLowerCase());
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(''); setSuccess('');
-    if (!form.old || !form.newP) { setError('Vui lòng điền đầy đủ thông tin.'); return; }
-    if (form.newP !== form.confirm) { setError('Xác nhận mật khẩu không khớp.'); return; }
-    if (form.newP.length < 8) { setError('Mật khẩu mới phải từ 8 ký tự.'); return; }
+    if (!form.fullName.trim()) { setError('Họ tên không được để trống.'); return; }
+    if (form.newPassword) {
+      if (!form.currentPassword) { setError('Vui lòng nhập mật khẩu hiện tại để đổi mật khẩu mới.'); return; }
+      if (form.newPassword.length < 8) { setError('Mật khẩu mới phải từ 8 ký tự trở lên.'); return; }
+      if (form.newPassword !== form.confirmPassword) { setError('Mật khẩu xác nhận không khớp.'); return; }
+    }
+
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/auth/change-password`, {
-        method: 'POST',
+      const res = await fetch(`${API_URL}/auth/profile`, {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ oldPassword: form.old, newPassword: form.newP }),
+        body: JSON.stringify({
+          fullName: form.fullName.trim(),
+          code: form.code.trim(),
+          school: form.school || null,
+          department: form.department || null,
+          class: form.class || null,
+          currentPassword: form.newPassword ? form.currentPassword : undefined,
+          newPassword: form.newPassword || undefined
+        })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
-      setSuccess('Đổi mật khẩu thành công!');
-      setForm({ old: '', newP: '', confirm: '' });
-    } catch (err) { setError(err.message); } finally { setLoading(false); }
+      setSuccess('Cập nhật thông tin cá nhân thành công!');
+      if (onUpdateUser) {
+        onUpdateUser(data.user);
+      }
+      setForm(prev => ({
+        ...prev,
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      }));
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const inputStyle = { background: '#F9FAFD', borderColor: '#D2DBEA', color: '#2d4771' };
 
   return (
-    <div className="rounded-3xl shadow-sm p-8 border max-w-md" style={{ background: '#fff', borderColor: '#D2DBEA' }}>
-      <h2 className="text-xl font-extrabold mb-1" style={{ color: '#2d4771' }}>Đổi Mật Khẩu</h2>
-      <p className="text-xs mb-6" style={{ color: '#6E9AE0' }}>Thay đổi mật khẩu định kỳ để bảo mật tài khoản</p>
+    <div className="rounded-3xl shadow-sm p-8 border max-w-2xl animate-fade-in" style={{ background: '#fff', borderColor: '#D2DBEA' }}>
+      <h2 className="text-xl font-extrabold mb-1" style={{ color: '#2d4771' }}>Thông Tin Cá Nhân</h2>
+      <p className="text-xs mb-6" style={{ color: '#6E9AE0' }}>Cập nhật thông tin tài khoản và đổi mật khẩu</p>
+
       {error && <div className="mb-4 p-3 rounded-2xl text-sm border" style={{ background: '#fff5f5', borderColor: '#fecaca', color: '#dc2626' }}>{error}</div>}
       {success && <div className="mb-4 p-3 rounded-2xl text-sm border" style={{ background: '#f0fdf4', borderColor: '#bbf7d0', color: '#16a34a' }}>{success}</div>}
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {[
-          { key: 'old', label: 'Mật khẩu hiện tại' },
-          { key: 'newP', label: 'Mật khẩu mới (tối thiểu 8 ký tự)' },
-          { key: 'confirm', label: 'Xác nhận mật khẩu mới' },
-        ].map(({ key, label }) => (
-          <div key={key}>
-            <label className="block text-sm font-semibold mb-1 ml-1" style={{ color: '#2d4771' }}>{label}</label>
+
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-semibold mb-1 ml-1" style={{ color: '#2d4771' }}>Địa chỉ Email</label>
             <input
-              type="password" placeholder="••••••••"
-              value={form[key]} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
+              type="text" disabled value={user.email}
+              className="w-full px-4 py-2.5 rounded-2xl border text-sm font-medium opacity-60 cursor-not-allowed"
+              style={inputStyle}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold mb-1 ml-1" style={{ color: '#2d4771' }}>Vai trò hệ thống</label>
+            <input
+              type="text" disabled value={ROLE_LABELS[user.role] || user.role}
+              className="w-full px-4 py-2.5 rounded-2xl border text-sm font-medium opacity-60 cursor-not-allowed"
+              style={inputStyle}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-semibold mb-1 ml-1" style={{ color: '#2d4771' }}>Họ và Tên *</label>
+            <input
+              type="text" required placeholder="Nguyễn Văn A"
+              value={form.fullName} onChange={e => setForm(f => ({ ...f, fullName: e.target.value }))}
               className="w-full px-4 py-2.5 rounded-2xl border text-sm font-medium outline-none"
               style={inputStyle}
             />
           </div>
-        ))}
-        <button type="submit" disabled={loading} className="w-full py-3 text-white font-bold rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50" style={{ background: 'linear-gradient(135deg, #6E9AE0, #487bc9)' }}>
-          {loading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : 'Cập nhật mật khẩu'}
+          <div>
+            <label className="block text-sm font-semibold mb-1 ml-1" style={{ color: '#2d4771' }}>Mã nhận diện (MSSV / MSGV / MST)</label>
+            <input
+              type="text" placeholder="Nhập mã số"
+              value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value }))}
+              className="w-full px-4 py-2.5 rounded-2xl border text-sm font-medium outline-none"
+              style={inputStyle}
+            />
+          </div>
+        </div>
+
+        {/* School/Department/Class target picker */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-dashed" style={{ borderColor: '#D2DBEA' }}>
+          <div>
+            <label className="block text-sm font-semibold mb-1 ml-1" style={{ color: '#2d4771' }}>Trường học</label>
+            <select
+              value={form.school}
+              onChange={e => setForm(f => ({ ...f, school: e.target.value, department: '', class: '' }))}
+              className="w-full px-4 py-2.5 rounded-2xl border text-sm font-bold outline-none"
+              style={inputStyle}
+            >
+              <option value="">Chọn trường...</option>
+              {Object.entries(SCHOOLS).map(([k, v]) => (
+                <option key={k} value={k}>{v.label}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-semibold mb-1 ml-1" style={{ color: '#2d4771' }}>Khoa / Phòng</label>
+            <select
+              value={form.department}
+              disabled={!form.school}
+              onChange={e => setForm(f => ({ ...f, department: e.target.value, class: '' }))}
+              className="w-full px-4 py-2.5 rounded-2xl border text-sm font-bold outline-none disabled:opacity-50"
+              style={inputStyle}
+            >
+              <option value="">Chọn khoa...</option>
+              {(SCHOOLS[form.school]?.departments || []).map(d => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-semibold mb-1 ml-1" style={{ color: '#2d4771' }}>Lớp học</label>
+            <input
+              type="text"
+              placeholder="VD: 21IT1"
+              disabled={!form.department || user.role !== 'Student'}
+              value={form.class}
+              onChange={e => setForm(f => ({ ...f, class: e.target.value }))}
+              className="w-full px-4 py-2.5 rounded-2xl border text-sm font-medium outline-none disabled:opacity-50"
+              style={inputStyle}
+            />
+          </div>
+        </div>
+
+        <div style={{ borderTop: '1px solid #D2DBEA', paddingTop: '20px', marginTop: '20px' }}>
+          <h3 className="text-sm font-bold mb-3" style={{ color: '#2d4771' }}>Đổi Mật Khẩu (Để trống nếu không muốn đổi)</h3>
+          
+          {isDemo && (
+            <div className="mb-4 p-3 rounded-2xl text-xs" style={{ background: '#FFF8E6', color: '#92400e', border: '1px solid #FBECAC' }}>
+              ⚠️ Tài khoản demo hệ thống không hỗ trợ đổi mật khẩu để bảo đảm tính toàn vẹn dữ liệu.
+            </div>
+          )}
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-semibold mb-1 ml-1" style={{ color: '#2d4771' }}>Mật khẩu hiện tại</label>
+              <input
+                type="password" placeholder="••••••••" disabled={isDemo}
+                value={form.currentPassword} onChange={e => setForm(f => ({ ...f, currentPassword: e.target.value }))}
+                className="w-full px-4 py-2.5 rounded-2xl border text-sm font-medium outline-none disabled:opacity-50"
+                style={inputStyle}
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold mb-1 ml-1" style={{ color: '#2d4771' }}>Mật khẩu mới</label>
+                <input
+                  type="password" placeholder="••••••••" disabled={isDemo}
+                  value={form.newPassword} onChange={e => setForm(f => ({ ...f, newPassword: e.target.value }))}
+                  className="w-full px-4 py-2.5 rounded-2xl border text-sm font-medium outline-none disabled:opacity-50"
+                  style={inputStyle}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-1 ml-1" style={{ color: '#2d4771' }}>Xác nhận mật khẩu mới</label>
+                <input
+                  type="password" placeholder="••••••••" disabled={isDemo}
+                  value={form.confirmPassword} onChange={e => setForm(f => ({ ...f, confirmPassword: e.target.value }))}
+                  className="w-full px-4 py-2.5 rounded-2xl border text-sm font-medium outline-none disabled:opacity-50"
+                  style={inputStyle}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" disabled={loading} className="w-full py-3 text-white font-bold rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50" style={{ background: 'linear-gradient(135deg, #6E9AE0, #487bc9)', marginTop: '10px' }}>
+          {loading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : 'Lưu thay đổi'}
         </button>
       </form>
     </div>

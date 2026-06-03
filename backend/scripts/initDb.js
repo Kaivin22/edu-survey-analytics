@@ -38,49 +38,106 @@ async function seed() {
         password: hashedPassword,
         fullName: 'Nguyễn Quản Trị',
         code: 'ADMIN001',
-        roleId: 1
+        roleId: 1,
+        school: 'Kiến trúc Đà Nẵng (DAU)',
+        department: 'Công nghệ thông tin'
       },
       {
         email: 'manager@edu.vn',
         password: hashedPassword,
         fullName: 'Trần Cán Bộ',
         code: 'CBQL001',
-        roleId: 2
+        roleId: 2,
+        school: 'Kiến trúc Đà Nẵng (DAU)',
+        department: 'Công nghệ thông tin'
       },
       {
         email: 'student1@edu.vn',
         password: hashedPassword,
         fullName: 'Trần Kim Liên',
         code: '2251220153',
-        roleId: 3
+        roleId: 3,
+        school: 'Kiến trúc Đà Nẵng (DAU)',
+        department: 'Công nghệ thông tin',
+        class: '22CT4'
       },
       {
         email: 'student2@edu.vn',
         password: hashedPassword,
         fullName: 'Nguyễn Văn Tuấn',
         code: '2251220274',
-        roleId: 3
+        roleId: 3,
+        school: 'Kiến trúc Đà Nẵng (DAU)',
+        department: 'Công nghệ thông tin',
+        class: '22CT4'
       },
       {
         email: 'lecturer1@edu.vn',
         password: hashedPassword,
         fullName: 'Phạm Giảng Viên',
         code: 'GV202201',
-        roleId: 4
+        roleId: 4,
+        school: 'Kiến trúc Đà Nẵng (DAU)',
+        department: 'Công nghệ thông tin'
       },
       {
         email: 'alumnus1@edu.vn',
         password: hashedPassword,
         fullName: 'Hoàng Cựu SV',
         code: 'CSV2020',
-        roleId: 5
+        roleId: 5,
+        school: 'Kiến trúc Đà Nẵng (DAU)',
+        department: 'Kinh tế'
       },
       {
         email: 'employer1@edu.vn',
         password: hashedPassword,
         fullName: 'FPT Software (Đại diện)',
         code: 'TAX_FPT_01',
-        roleId: 6
+        roleId: 6,
+        school: 'Việt Hàn (VKU)',
+        department: 'Khoa học Máy tính'
+      },
+      // Additional users for rich filter stats
+      {
+        email: 'student3@edu.vn',
+        password: hashedPassword,
+        fullName: 'Lê Văn Tám',
+        code: '2251220333',
+        roleId: 3,
+        school: 'Kiến trúc Đà Nẵng (DAU)',
+        department: 'Công nghệ thông tin',
+        class: '22CT1'
+      },
+      {
+        email: 'student4@edu.vn',
+        password: hashedPassword,
+        fullName: 'Phạm Thị Chín',
+        code: '2251220444',
+        roleId: 3,
+        school: 'Kiến trúc Đà Nẵng (DAU)',
+        department: 'Kinh tế',
+        class: '22KTQD1'
+      },
+      {
+        email: 'student5@edu.vn',
+        password: hashedPassword,
+        fullName: 'Hoàng Văn Mười',
+        code: '2211220555',
+        roleId: 3,
+        school: 'Việt Hàn (VKU)',
+        department: 'Khoa học Máy tính',
+        class: '22IT1'
+      },
+      {
+        email: 'student6@edu.vn',
+        password: hashedPassword,
+        fullName: 'Đỗ Thị Một',
+        code: '2211220666',
+        roleId: 3,
+        school: 'Việt Hàn (VKU)',
+        department: 'Kinh tế số & Thương mại điện tử',
+        class: '22EC1'
       }
     ]);
     console.log('Users seeded.');
@@ -96,7 +153,10 @@ async function seed() {
       status: 'Active',
       startDate: new Date(),
       endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-      createdBy: 1
+      createdBy: 1,
+      school: 'Kiến trúc Đà Nẵng (DAU)',
+      department: 'Công nghệ thông tin',
+      class: '22CT4'
     });
 
     const q1_1 = await Question.create({
@@ -152,7 +212,9 @@ async function seed() {
       status: 'Active',
       startDate: new Date(),
       endDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
-      createdBy: 1
+      createdBy: 1,
+      school: 'Kiến trúc Đà Nẵng (DAU)',
+      department: 'Công nghệ thông tin'
     });
 
     const q2_1 = await Question.create({
@@ -201,7 +263,9 @@ async function seed() {
       status: 'Active',
       startDate: new Date(),
       endDate: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000),
-      createdBy: 1
+      createdBy: 1,
+      school: 'Kiến trúc Đà Nẵng (DAU)',
+      department: 'Kinh tế'
     });
 
     const q3_1 = await Question.create({
@@ -256,7 +320,9 @@ async function seed() {
       status: 'Active',
       startDate: new Date(),
       endDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
-      createdBy: 1
+      createdBy: 1,
+      school: 'Việt Hàn (VKU)',
+      department: 'Khoa học Máy tính'
     });
 
     const q4_1 = await Question.create({
@@ -337,15 +403,14 @@ async function seed() {
     const mockSubmissions = [
       { studentId: 3, q1: '5', q2: '5', q3: optId2, q4: '4', q5: 'Môn học rất bổ ích, mong muốn thực hành nhiều hơn' },
       { studentId: 4, q1: '4', q2: '4', q3: optId2, q4: '3', q5: 'Giảng viên giảng dạy rất hay' },
-      // Create some additional mock user responses (even if they are not explicitly registered, we can relate them to userId 3 or 4 or null)
-      { studentId: null, q1: '5', q2: '4', q3: optId2, q4: '5', q5: 'Cơ sở vật chất của khoa đã cải thiện nhiều' },
-      { studentId: null, q1: '3', q2: '3', q3: optId3, q4: '2', q5: 'Lý thuyết hơi nặng, thi khó' },
-      { studentId: null, q1: '4', q2: '5', q3: optId2, q4: '4', q5: '' },
-      { studentId: null, q1: '5', q2: '5', q3: optId2, q4: '4', q5: 'Thầy cô tận tâm hỗ trợ nhiệt tình!' },
-      { studentId: null, q1: '2', q2: '3', q3: optId3, q4: '3', q5: 'Cần cập nhật giáo trình mới hơn' },
-      { studentId: null, q1: '4', q2: '4', q3: optId2, q4: '5', q5: '' },
-      { studentId: null, q1: '5', q2: '4', q3: optId1, q4: '4', q5: 'Đề thi hơi dễ so với kiến thức học' },
-      { studentId: null, q1: '4', q2: '5', q3: optId2, q4: '3', q5: 'Chúc khoa phát triển!' }
+      { studentId: 8, q1: '5', q2: '4', q3: optId2, q4: '5', q5: 'Cơ sở vật chất của khoa đã cải thiện nhiều' },
+      { studentId: 9, q1: '3', q2: '3', q3: optId3, q4: '2', q5: 'Lý thuyết hơi nặng, thi khó' },
+      { studentId: 10, q1: '4', q2: '5', q3: optId2, q4: '4', q5: 'Học tập ở trường rất tốt.' },
+      { studentId: 11, q1: '5', q2: '5', q3: optId2, q4: '4', q5: 'Thầy cô tận tâm hỗ trợ nhiệt tình!' },
+      { studentId: 8, q1: '2', q2: '3', q3: optId3, q4: '3', q5: 'Cần cập nhật giáo trình mới hơn' },
+      { studentId: 3, q1: '4', q2: '4', q3: optId2, q4: '5', q5: 'Rất hài lòng về chất lượng dạy' },
+      { studentId: 4, q1: '5', q2: '4', q3: optId1, q4: '4', q5: 'Đề thi hơi dễ so với kiến thức học' },
+      { studentId: 10, q1: '4', q2: '5', q3: optId2, q4: '3', q5: 'Chúc khoa phát triển!' }
     ];
 
     for (let sub of mockSubmissions) {
@@ -380,8 +445,8 @@ async function seed() {
 
     const mockEmpSubmissions = [
       { userId: 7, q1: '4', q2: '5', q3: empOpt1, q4: [empSoft1], q5: 'Sinh viên trường có thái độ làm việc cực kỳ tốt' },
-      { userId: null, q1: '5', q2: '4', q3: empOpt2, q4: [empSoft1, empSoft2], q5: 'Kiến thức chuyên môn vững vàng, tuy nhiên kỹ năng đàm phán cần cải thiện' },
-      { userId: null, q1: '4', q2: '4', q3: empOpt2, q4: [empSoft2], q5: 'Đáp ứng tốt nhu cầu phát triển phần mềm' }
+      { userId: 7, q1: '5', q2: '4', q3: empOpt2, q4: [empSoft1, empSoft2], q5: 'Kiến thức chuyên môn vững vàng, tuy nhiên kỹ năng đàm phán cần cải thiện' },
+      { userId: 7, q1: '4', q2: '4', q3: empOpt2, q4: [empSoft2], q5: 'Đáp ứng tốt nhu cầu phát triển phần mềm' }
     ];
 
     for (let sub of mockEmpSubmissions) {

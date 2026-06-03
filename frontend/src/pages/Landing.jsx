@@ -58,7 +58,7 @@ function smoothScroll(e, href) {
   if (el) el.scrollIntoView({ behavior: 'smooth' });
 }
 
-export default function Landing() {
+export default function Landing({ user, onLogout }) {
   const [scrolled, setScrolled] = useState(false);
   const [formData, setFormData] = useState({ name: '', email: '', message: '' });
   const [formSent, setFormSent] = useState(false);
@@ -104,41 +104,60 @@ export default function Landing() {
               >{link.label}</a>
             ))}
           </div>
-          <div style={{ display: 'flex', gap: 12 }}>
-            <Link to="/login"
-              style={{ padding: '8px 20px', borderRadius: 999, border: `2px solid ${scrolled ? '#6E9AE0' : 'rgba(255,255,255,0.5)'}`, color: scrolled ? '#6E9AE0' : '#fff', textDecoration: 'none', fontWeight: 600, fontSize: 14, transition: 'all 0.2s' }}>
-              Đăng nhập
-            </Link>
-            <Link to="/login"
-              style={{ padding: '8px 20px', borderRadius: 999, background: '#6E9AE0', color: '#fff', textDecoration: 'none', fontWeight: 700, fontSize: 14, boxShadow: '0 4px 14px rgba(110,154,224,0.4)' }}>
-              Tham gia khảo sát →
-            </Link>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            {user ? (
+              <>
+                <span style={{ color: scrolled ? '#2d4771' : '#fff', fontWeight: 600, fontSize: 14, textShadow: scrolled ? 'none' : '0 1px 4px rgba(0,0,0,0.5)' }}>
+                  Xin chào, {user.fullName}
+                </span>
+                <Link to="/dashboard"
+                  style={{ padding: '8px 20px', borderRadius: 999, background: '#6E9AE0', color: '#fff', textDecoration: 'none', fontWeight: 700, fontSize: 14, boxShadow: '0 4px 14px rgba(110,154,224,0.4)' }}>
+                  Vào Dashboard
+                </Link>
+                <button onClick={onLogout}
+                  style={{ padding: '8px 16px', borderRadius: 999, border: `2px solid ${scrolled ? '#ef4444' : 'rgba(239,68,68,0.5)'}`, color: scrolled ? '#ef4444' : '#fff', background: 'transparent', cursor: 'pointer', fontWeight: 700, fontSize: 14, transition: 'all 0.2s' }}
+                  onMouseOver={e => { e.currentTarget.style.background = '#ef4444'; e.currentTarget.style.color = '#fff'; }}
+                  onMouseOut={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = scrolled ? '#ef4444' : '#fff'; }}
+                >
+                  Đăng xuất
+                </button>
+              </>
+            ) : (
+              <>
+                <Link to="/login"
+                  style={{ padding: '8px 20px', borderRadius: 999, border: `2px solid ${scrolled ? '#6E9AE0' : 'rgba(255,255,255,0.5)'}`, color: scrolled ? '#6E9AE0' : '#fff', textDecoration: 'none', fontWeight: 600, fontSize: 14, transition: 'all 0.2s' }}>
+                  Đăng nhập
+                </Link>
+                <Link to="/login"
+                  style={{ padding: '8px 20px', borderRadius: 999, background: '#6E9AE0', color: '#fff', textDecoration: 'none', fontWeight: 700, fontSize: 14, boxShadow: '0 4px 14px rgba(110,154,224,0.4)' }}>
+                  Tham gia khảo sát →
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </nav>
 
       {/* ─── HERO SECTION (video background) ─── */}
-      <section id="hero" style={{ position: 'relative', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+      <section id="hero" style={{ position: 'relative', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderBottomLeftRadius: '40px', borderBottomRightRadius: '40px' }}>
         {/* Video background */}
         <video autoPlay loop muted playsInline
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0 }}
           src={INTRO_VIDEO}
         />
-        {/* Overlay */}
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(0,43,110,0.75) 0%, rgba(110,154,224,0.55) 50%, rgba(0,67,174,0.70) 100%)', zIndex: 1 }} />
         {/* Animated blobs */}
         <div style={{ position: 'absolute', top: '20%', left: '10%', width: 300, height: 300, borderRadius: '50%', background: 'rgba(110,154,224,0.15)', filter: 'blur(60px)', animation: 'pulse 6s ease-in-out infinite', zIndex: 1 }} />
         <div style={{ position: 'absolute', bottom: '15%', right: '8%', width: 400, height: 400, borderRadius: '50%', background: 'rgba(255,255,255,0.08)', filter: 'blur(80px)', animation: 'pulse 8s ease-in-out infinite 2s', zIndex: 1 }} />
 
         <div style={{ position: 'relative', zIndex: 2, textAlign: 'center', color: '#fff', maxWidth: 860, padding: '0 2.5rem' }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 999, padding: '6px 18px', marginBottom: 28, backdropFilter: 'blur(8px)' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 999, padding: '6px 18px', marginBottom: 28, backdropFilter: 'blur(8px)' }}>
             <span style={{ fontSize: 14, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase' }}>🔗 Kết Nối Vì Tương Lai</span>
           </div>
-          <h1 style={{ fontSize: 56, fontWeight: 800, lineHeight: 1.15, marginBottom: 24, letterSpacing: -1, textShadow: '0 2px 20px rgba(0,0,0,0.3)' }}>
+          <h1 style={{ fontSize: 56, fontWeight: 800, lineHeight: 1.15, marginBottom: 24, letterSpacing: -1, textShadow: '0 4px 20px rgba(0,0,0,0.8), 0 2px 4px rgba(0,0,0,0.9)' }}>
             Nâng Tầm Giáo Dục<br />
             <span style={{ color: '#B3C5FF' }}>Qua Tiếng Nói Chung</span>
           </h1>
-          <p style={{ fontSize: 18, lineHeight: 1.7, marginBottom: 40, color: 'rgba(255,255,255,0.85)', maxWidth: 620, margin: '0 auto 40px' }}>
+          <p style={{ fontSize: 18, lineHeight: 1.7, marginBottom: 40, color: 'rgba(255,255,255,0.95)', maxWidth: 620, margin: '0 auto 40px', textShadow: '0 2px 10px rgba(0,0,0,0.9), 0 1px 4px rgba(0,0,0,0.95)' }}>
             Nền tảng kết nối nhà trường, giảng viên, sinh viên và doanh nghiệp để xây dựng môi trường học tập vì tương lai. Kiến tạo không gian cho sự thấu hiểu và phát triển bền vững.
           </p>
           <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>

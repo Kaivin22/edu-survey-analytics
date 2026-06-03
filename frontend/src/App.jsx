@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
-import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import Dashboard from './pages/Dashboard';
 import AdminDashboard from './pages/AdminDashboard';
@@ -35,6 +34,11 @@ function App() {
     setUser(null);
   };
 
+  const updateUser = (userData) => {
+    localStorage.setItem('user', JSON.stringify(userData));
+    setUser(userData);
+  };
+
   if (loading) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F9FAFD' }}>
@@ -51,16 +55,16 @@ function App() {
     <Router>
       <Routes>
         {/* ── Public Landing page (always accessible at /) ── */}
-        <Route path="/" element={<Landing />} />
+        <Route path="/" element={<Landing user={user} onLogout={logout} />} />
 
         {/* ── Auth pages ── */}
         <Route
           path="/login"
-          element={user ? <Navigate to="/dashboard" replace /> : <Login onLogin={login} />}
+          element={user ? <Navigate to="/dashboard" replace /> : <Login onLogin={login} initialTab="login" />}
         />
         <Route
           path="/register"
-          element={user ? <Navigate to="/dashboard" replace /> : <Register />}
+          element={user ? <Navigate to="/dashboard" replace /> : <Login onLogin={login} initialTab="register" />}
         />
         <Route
           path="/forgot-password"
@@ -73,9 +77,9 @@ function App() {
           element={
             user ? (
               ['Admin', 'Manager'].includes(user.role) ? (
-                <AdminDashboard user={user} onLogout={logout} />
+                <AdminDashboard user={user} onLogout={logout} onUpdateUser={updateUser} />
               ) : (
-                <Dashboard user={user} onLogout={logout} />
+                <Dashboard user={user} onLogout={logout} onUpdateUser={updateUser} />
               )
             ) : (
               <Navigate to="/login" replace />

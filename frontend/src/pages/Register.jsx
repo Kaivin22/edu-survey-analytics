@@ -69,9 +69,16 @@ function Register() {
         style={{ position: 'fixed', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0 }}
         src={LOGIN_VIDEO}
       />
-      <div style={{ position: 'fixed', inset: 0, background: 'linear-gradient(135deg, rgba(0,43,110,0.78) 0%, rgba(110,154,224,0.60) 50%, rgba(0,67,174,0.75) 100%)', zIndex: 1 }} />
 
-      <div className="w-full max-w-lg rounded-3xl shadow-xl p-8" style={{ background: 'rgba(255,255,255,0.97)', borderColor: 'rgba(110,154,224,0.2)', position: 'relative', zIndex: 2 }}>
+      {/* Floating Home Button */}
+      <Link to="/" style={{ position: 'absolute', top: 24, left: 24, zIndex: 10, display: 'flex', alignItems: 'center', gap: 8, color: '#fff', textDecoration: 'none', fontWeight: 700, fontSize: 14, background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.25)', padding: '10px 18px', borderRadius: 12, backdropFilter: 'blur(8px)', transition: 'background 0.2s', boxShadow: '0 4px 12px rgba(0,0,0,0.25)' }}
+        onMouseOver={e => e.currentTarget.style.background = 'rgba(0,0,0,0.8)'}
+        onMouseOut={e => e.currentTarget.style.background = 'rgba(0,0,0,0.6)'}
+      >
+        ← Quay lại Trang chủ
+      </Link>
+
+      <div className="w-full max-w-lg rounded-3xl shadow-xl p-8" style={{ background: 'rgba(255,255,255,0.98)', borderColor: 'rgba(110,154,224,0.2)', position: 'relative', zIndex: 2, border: '1px solid rgba(210,219,234,0.8)' }}>
 
         <div className="flex flex-col items-center mb-6">
           <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white shadow-lg mb-3" style={{ background: 'linear-gradient(135deg, #6E9AE0, #487bc9)' }}>
