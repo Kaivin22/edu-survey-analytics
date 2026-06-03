@@ -4,6 +4,11 @@ import { ArrowLeft, Save, Plus, Trash2, CheckCircle2, AlertCircle, ChevronRight 
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
+const SCHOOLS = {
+  'DAU': { label: 'Kiến trúc Đà Nẵng (DAU)', departments: ['Kiến trúc', 'Quy hoạch đô thị', 'Nội thất', 'Mỹ thuật công nghiệp', 'Xây dựng'] },
+  'VKU': { label: 'Việt Hàn (VKU)',           departments: ['Công nghệ thông tin', 'Kỹ thuật máy tính', 'Điện tử viễn thông', 'Thương mại điện tử', 'Quản trị kinh doanh'] },
+};
+
 const inputBase = {
   background: '#F9FAFD',
   borderColor: '#D2DBEA',
@@ -15,7 +20,16 @@ function SurveyCreation({ isEdit = false }) {
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
 
-  const [form, setForm] = useState({ title: '', description: '', targetAudience: 'Student', status: 'Draft', endDate: '' });
+  const [form, setForm] = useState({
+    title: '',
+    description: '',
+    targetAudience: 'Student',
+    status: 'Draft',
+    endDate: '',
+    school: '',
+    department: '',
+    class: ''
+  });
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -29,7 +43,16 @@ function SurveyCreation({ isEdit = false }) {
       const res = await fetch(`${API_URL}/surveys/${id}`, { headers: { Authorization: `Bearer ${token}` } });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
-      setForm({ title: data.title, description: data.description || '', targetAudience: data.targetAudience, status: data.status, endDate: data.endDate ? new Date(data.endDate).toISOString().split('T')[0] : '' });
+      setForm({
+        title: data.title,
+        description: data.description || '',
+        targetAudience: data.targetAudience,
+        status: data.status,
+        endDate: data.endDate ? new Date(data.endDate).toISOString().split('T')[0] : '',
+        school: data.school || '',
+        department: data.department || '',
+        class: data.class || ''
+      });
       setQuestions(data.Questions.map(q => ({ ...q, options: q.options || [] })));
     } catch (e) { setError(e.message); } finally { setLoading(false); }
   };
@@ -47,7 +70,7 @@ function SurveyCreation({ isEdit = false }) {
   const updateOption = (qi, oi, text) => setQuestions(prev => prev.map((q, idx) => idx === qi ? { ...q, options: q.options.map((o, i) => i === oi ? { ...o, text } : o) } : q));
 
   const handleSave = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     setError(''); setSuccess('');
     if (!form.title) { setError('Tiêu đề cuộc khảo sát là bắt buộc.'); return; }
     if (!questions.length) { setError('Cuộc khảo sát phải có ít nhất 1 câu hỏi.'); return; }
@@ -63,7 +86,15 @@ function SurveyCreation({ isEdit = false }) {
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ ...form, startDate: new Date(), endDate: form.endDate ? new Date(form.endDate) : null, questions }),
+        body: JSON.stringify({
+          ...form,
+          startDate: new Date(),
+          endDate: form.endDate ? new Date(form.endDate) : null,
+          questions,
+          school: form.school || null,
+          department: form.department || null,
+          class: form.class || null
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
@@ -73,6 +104,7 @@ function SurveyCreation({ isEdit = false }) {
   };
 
   const selectStyle = { ...inputBase, appearance: 'none' };
+  const depts = form.school ? (SCHOOLS[form.school]?.departments || []) : [];
 
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#F9FAFD' }}>
@@ -125,7 +157,7 @@ function SurveyCreation({ isEdit = false }) {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {[
-                { label: 'Đối tượng', key: 'targetAudience', options: [['Student','Sinh viên'],['Lecturer','Giảng viên'],['Alumnus','Cựu sinh viên'],['Employer','Nhà tuyển dụng'],['All','Tất cả']] },
+                { label: 'Đối tượng mục tiêu', key: 'targetAudience', options: [['Student','Sinh viên'],['Lecturer','Giảng viên'],['Alumnus','Cựu sinh viên'],['Employer','Nhà tuyển dụng'],['All','Tất cả']] },
                 { label: 'Trạng thái', key: 'status', options: [['Draft','Bản nháp'],['Active','Kích hoạt'],['Closed','Đã đóng']] },
               ].map(({ label, key, options }) => (
                 <div key={key}>
@@ -140,6 +172,58 @@ function SurveyCreation({ isEdit = false }) {
                 <label className="block text-sm font-semibold mb-1 ml-1" style={{ color: '#2d4771' }}>Ngày hết hạn</label>
                 <input type="date" value={form.endDate} onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))}
                   className="w-full px-4 py-2 rounded-2xl border text-sm font-medium outline-none" style={inputBase} />
+              </div>
+            </div>
+
+            {/* School / Department / Class Targeting Filters */}
+            <div className="pt-4 border-t border-dashed" style={{ borderColor: '#D2DBEA' }}>
+              <p className="text-xs font-bold uppercase tracking-wide mb-3" style={{ color: '#6E9AE0' }}>Phân quyền / Đối tượng khảo sát chi tiết (Tùy chọn)</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold mb-1 ml-1" style={{ color: '#2d4771' }}>Trường học mục tiêu</label>
+                  <select
+                    value={form.school}
+                    onChange={e => setForm(f => ({ ...f, school: e.target.value, department: '', class: '' }))}
+                    className="w-full px-4 py-2.5 rounded-2xl border text-sm font-bold outline-none"
+                    style={selectStyle}
+                  >
+                    <option value="">Tất cả các trường (Đà Nẵng)</option>
+                    {Object.entries(SCHOOLS).map(([k, v]) => (
+                      <option key={k} value={k}>{v.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold mb-1 ml-1" style={{ color: '#2d4771' }}>Khoa mục tiêu</label>
+                  <select
+                    value={form.department}
+                    disabled={!form.school}
+                    onChange={e => setForm(f => ({ ...f, department: e.target.value, class: '' }))}
+                    className="w-full px-4 py-2.5 rounded-2xl border text-sm font-bold outline-none disabled:opacity-50"
+                    style={selectStyle}
+                  >
+                    <option value="">Tất cả các khoa</option>
+                    {depts.map(d => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold mb-1 ml-1" style={{ color: '#2d4771' }}>Lớp mục tiêu</label>
+                  <input
+                    type="text"
+                    placeholder="VD: 21IT1 (Chỉ cho Sinh viên)"
+                    disabled={!form.department || form.targetAudience !== 'Student'}
+                    value={form.class}
+                    onChange={e => setForm(f => ({ ...f, class: e.target.value }))}
+                    className="w-full px-4 py-2.5 rounded-2xl border text-sm font-medium outline-none disabled:opacity-50"
+                    style={inputBase}
+                    onFocus={e => e.target.style.borderColor = '#6E9AE0'}
+                    onBlur={e => e.target.style.borderColor = '#D2DBEA'}
+                  />
+                </div>
               </div>
             </div>
           </div>

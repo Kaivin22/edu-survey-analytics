@@ -39,6 +39,18 @@ const User = sequelize.define('User', {
   code: {
     type: DataTypes.STRING,
     allowNull: true
+  },
+  school: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  department: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  class: {
+    type: DataTypes.STRING,
+    allowNull: true
   }
 });
 
@@ -72,6 +84,18 @@ const Survey = sequelize.define('Survey', {
   },
   endDate: {
     type: DataTypes.DATE,
+    allowNull: true
+  },
+  school: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  department: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  class: {
+    type: DataTypes.STRING,
     allowNull: true
   }
 });

@@ -139,7 +139,7 @@ export default function Landing({ user, onLogout }) {
       </nav>
 
       {/* ─── HERO SECTION (video background) ─── */}
-      <section id="hero" style={{ position: 'relative', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+      <section id="hero" style={{ position: 'relative', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderBottomLeftRadius: '40px', borderBottomRightRadius: '40px' }}>
         {/* Video background */}
         <video autoPlay loop muted playsInline
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0 }}
