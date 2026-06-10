@@ -13,6 +13,18 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('surveys');
   const [stats, setStats] = useState({ total: 0, active: 0, users: 0 });
+  const [userFilters, setUserFilters] = useState({ role: '', school: '', department: '', class: '' });
+
+  const filteredAccounts = accounts.filter(acc => {
+    if (userFilters.role) {
+      const userRoleName = acc.role?.name || acc.role || '';
+      if (userRoleName !== userFilters.role) return false;
+    }
+    if (userFilters.school && acc.school !== userFilters.school) return false;
+    if (userFilters.department && acc.department !== userFilters.department) return false;
+    if (userFilters.class && (!acc.class || !acc.class.toLowerCase().includes(userFilters.class.toLowerCase()))) return false;
+    return true;
+  });
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
 
@@ -233,18 +245,74 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
               <h2 className="text-xl font-extrabold" style={{ color: '#2d4771' }}>Quản lý Phân Quyền Tài Khoản</h2>
               <p className="text-xs mt-0.5" style={{ color: '#6E9AE0' }}>Thay đổi vai trò trực tiếp qua dropdown — hiệu lực tức thì</p>
             </div>
+
+            {/* Filter Bar */}
+            <div style={{
+              display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10,
+              background: '#fff', borderRadius: 20, border: '1.5px solid #D2DBEA',
+              padding: '12px 18px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginRight: 4 }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#487bc9' }}>Bộ lọc vị trí:</span>
+              </div>
+              
+              {/* Role filter */}
+              <select value={userFilters.role} onChange={e => setUserFilters(f => ({ ...f, role: e.target.value }))} style={{ padding: '7px 14px', borderRadius: 12, border: '1.5px solid #D2DBEA', background: '#fff', color: '#2d4771', fontSize: 13, fontWeight: 600, outline: 'none' }}>
+                <option value="">👥 Tất cả vai trò</option>
+                <option value="Admin">Quản trị viên</option>
+                <option value="Manager">Cán bộ quản lý</option>
+                <option value="Student">Sinh viên</option>
+                <option value="Lecturer">Giảng viên</option>
+                <option value="Alumnus">Cựu sinh viên</option>
+                <option value="Employer">Nhà tuyển dụng</option>
+              </select>
+
+              {/* School filter */}
+              <select value={userFilters.school} onChange={e => setUserFilters(f => ({ ...f, school: e.target.value, department: '', class: '' }))} style={{ padding: '7px 14px', borderRadius: 12, border: '1.5px solid #D2DBEA', background: '#fff', color: '#2d4771', fontSize: 13, fontWeight: 600, outline: 'none' }}>
+                <option value="">🏫 Tất cả trường</option>
+                <option value="Kiến trúc Đà Nẵng (DAU)">Kiến trúc Đà Nẵng (DAU)</option>
+                <option value="Việt Hàn (VKU)">Việt Hàn (VKU)</option>
+              </select>
+
+              {/* Department filter */}
+              <select value={userFilters.department} disabled={!userFilters.school} onChange={e => setUserFilters(f => ({ ...f, department: e.target.value }))} style={{ padding: '7px 14px', borderRadius: 12, border: '1.5px solid #D2DBEA', background: '#fff', color: '#2d4771', fontSize: 13, fontWeight: 600, outline: 'none', opacity: userFilters.school ? 1 : 0.5 }}>
+                <option value="">📚 Tất cả khoa</option>
+                {(userFilters.school === 'Kiến trúc Đà Nẵng (DAU)' 
+                  ? ['Kiến trúc', 'Quy hoạch đô thị', 'Nội thất', 'Mỹ thuật công nghiệp', 'Xây dựng'] 
+                  : ['Công nghệ thông tin', 'Kỹ thuật máy tính', 'Điện tử viễn thông', 'Thương mại điện tử', 'Quản trị kinh doanh']
+                ).map(d => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+
+              {/* Class filter */}
+              <input
+                value={userFilters.class}
+                onChange={e => setUserFilters(f => ({ ...f, class: e.target.value }))}
+                placeholder="🎓 Nhập lớp..."
+                style={{ padding: '7px 14px', borderRadius: 12, border: '1.5px solid #D2DBEA', background: '#fff', color: '#2d4771', fontSize: 13, fontWeight: 600, width: 150, outline: 'none' }}
+              />
+
+              {/* Reset filter */}
+              {(userFilters.role || userFilters.school || userFilters.department || userFilters.class) && (
+                <button onClick={() => setUserFilters({ role: '', school: '', department: '', class: '' })} style={{ padding: '6px 12px', borderRadius: 10, border: '1.5px solid #fecaca', background: '#fff5f5', color: '#dc2626', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                  Xóa lọc
+                </button>
+              )}
+            </div>
+
             <div className="rounded-2xl border overflow-hidden shadow-sm" style={{ borderColor: '#D2DBEA', background: '#fff' }}>
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
                   <thead>
                     <tr style={{ background: '#EEF4FD', borderBottom: '2px solid #D2DBEA' }}>
-                      {['Mã nhận diện', 'Họ và tên', 'Email', 'Vai trò', 'Xóa'].map(h => (
+                      {['Mã nhận diện', 'Họ và tên', 'Email', 'Vai trò', 'Trường / Khoa', 'Xóa'].map(h => (
                         <th key={h} className="py-3.5 px-5 text-xs font-extrabold uppercase tracking-wide" style={{ color: '#6E9AE0' }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {accounts.map((acc, i) => (
+                    {filteredAccounts.map((acc, i) => (
                       <tr key={acc.id} style={{ borderBottom: '1px solid #D2DBEA', background: i % 2 === 0 ? '#fff' : '#FAFBFE' }}>
                         <td className="py-3.5 px-5 text-sm font-bold" style={{ color: '#487bc9' }}>{acc.code || '—'}</td>
                         <td className="py-3.5 px-5 text-sm font-extrabold" style={{ color: '#2d4771' }}>{acc.fullName}</td>
@@ -260,6 +328,15 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
                             {roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
                           </select>
                         </td>
+                        <td className="py-3.5 px-5 text-xs" style={{ color: '#2d4771' }}>
+                          {acc.school ? (
+                            <div>
+                              <span className="font-bold">{acc.school.includes('DAU') ? 'DAU' : acc.school.includes('VKU') ? 'VKU' : acc.school}</span>
+                              {acc.department && ` › ${acc.department}`}
+                              {acc.class && ` › ${acc.class}`}
+                            </div>
+                          ) : '—'}
+                        </td>
                         <td className="py-3.5 px-5">
                           <button
                             onClick={() => deleteUser(acc.id)}
@@ -272,6 +349,13 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
                         </td>
                       </tr>
                     ))}
+                    {filteredAccounts.length === 0 && (
+                      <tr>
+                        <td colSpan="6" className="text-center py-8 text-sm text-slate-400 font-bold">
+                          Không tìm thấy tài khoản phù hợp với bộ lọc.
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
