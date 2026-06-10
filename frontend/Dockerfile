@@ -13,6 +13,10 @@ COPY . .
 ARG VITE_API_URL=http://localhost:5000/api
 ENV VITE_API_URL=$VITE_API_URL
 
+# Google OAuth Client ID (optional - leave empty to disable Google Login)
+ARG VITE_GOOGLE_CLIENT_ID=
+ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
+
 # Build static assets
 RUN npm run build
 

@@ -278,8 +278,10 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
               <select value={userFilters.department} disabled={!userFilters.school} onChange={e => setUserFilters(f => ({ ...f, department: e.target.value }))} style={{ padding: '7px 14px', borderRadius: 12, border: '1.5px solid #D2DBEA', background: '#fff', color: '#2d4771', fontSize: 13, fontWeight: 600, outline: 'none', opacity: userFilters.school ? 1 : 0.5 }}>
                 <option value="">📚 Tất cả khoa</option>
                 {(userFilters.school === 'Kiến trúc Đà Nẵng (DAU)' 
-                  ? ['Kiến trúc', 'Quy hoạch đô thị', 'Nội thất', 'Mỹ thuật công nghiệp', 'Xây dựng'] 
-                  : ['Công nghệ thông tin', 'Kỹ thuật máy tính', 'Điện tử viễn thông', 'Thương mại điện tử', 'Quản trị kinh doanh']
+                  ? ['Công nghệ thông tin', 'Kiến trúc', 'Xây dựng', 'Kinh tế'] 
+                  : userFilters.school === 'Việt Hàn (VKU)'
+                    ? ['Khoa học Máy tính', 'Kỹ thuật Máy tính', 'Kinh tế số & Thương mại điện tử']
+                    : ['Công nghệ thông tin', 'Kiến trúc', 'Xây dựng', 'Kinh tế', 'Khoa học Máy tính', 'Kỹ thuật Máy tính', 'Kinh tế số & Thương mại điện tử']
                 ).map(d => (
                   <option key={d} value={d}>{d}</option>
                 ))}
