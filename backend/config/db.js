@@ -21,19 +21,40 @@ if (dialect === 'sqlite') {
     storage: storagePath,
     logging: false // Set to console.log to see SQL queries
   });
-} else {
-  // MySQL connection if configured
-  sequelize = new Sequelize(
-    process.env.DB_NAME,
-    process.env.DB_USER,
-    process.env.DB_PASS,
-    {
-      host: process.env.DB_HOST,
-      port: process.env.DB_PORT || 3306,
-      dialect: 'mysql',
+} else if (dialect === 'postgres') {
+  // PostgreSQL connection (primarily for Supabase in production)
+  const connectionString = process.env.DATABASE_URL;
+  if (connectionString) {
+    sequelize = new Sequelize(connectionString, {
+      dialect: 'postgres',
+      dialectOptions: {
+        ssl: {
+          require: true,
+          rejectUnauthorized: false // Required for Supabase SSL connection from Render
+        }
+      },
       logging: false
-    }
-  );
+    });
+  } else {
+    // Fallback to individual env vars for local PostgreSQL
+    sequelize = new Sequelize(
+      process.env.DB_NAME,
+      process.env.DB_USER,
+      process.env.DB_PASS,
+      {
+        host: process.env.DB_HOST || 'localhost',
+        port: process.env.DB_PORT || 5432,
+        dialect: 'postgres',
+        dialectOptions: {
+          ssl: process.env.DB_SSL === 'true' ? {
+            require: true,
+            rejectUnauthorized: false
+          } : false
+        },
+        logging: false
+      }
+    );
+  }
 }
 
 module.exports = sequelize;

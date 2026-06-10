@@ -27,6 +27,10 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ message: 'Vui lòng cung cấp đầy đủ thông tin bắt buộc.' });
     }
 
+    if (parseInt(roleId) === 1 || parseInt(roleId) === 2) {
+      return res.status(403).json({ message: 'Không thể đăng ký tài khoản Quản trị viên hoặc Cán bộ quản lý công khai.' });
+    }
+
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
       return res.status(400).json({ message: 'Email này đã được sử dụng.' });
@@ -416,6 +420,10 @@ router.post('/google-register', async (req, res) => {
     const { email, name, roleId, school, department, class: classVal, code } = req.body;
     if (!email || !name || !roleId) {
       return res.status(400).json({ message: 'Thông tin đăng ký Google thiếu email, họ tên hoặc vai trò.' });
+    }
+
+    if (parseInt(roleId) === 1 || parseInt(roleId) === 2) {
+      return res.status(403).json({ message: 'Không thể đăng ký tài khoản Quản trị viên hoặc Cán bộ quản lý công khai.' });
     }
 
     const existingUser = await User.findOne({ where: { email } });

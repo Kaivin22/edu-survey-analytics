@@ -216,6 +216,9 @@ export default function Login({ onLogin, initialTab = 'login' }) {
   // Google OAuth states
   const [authGoogleLoading, setAuthGoogleLoading] = useState(false);
   const [googleUserData, setGoogleUserData] = useState(null); // stores { email, name } for registration
+  const [showMockGoogleModal, setShowMockGoogleModal] = useState(false);
+  const [mockGoogleEmail, setMockGoogleEmail] = useState('googletest@edu.vn');
+  const [mockGoogleName, setMockGoogleName] = useState('Nguyễn Google');
 
   // Demo accounts modal
   const [showDemoAccounts, setShowDemoAccounts] = useState(false);
@@ -234,6 +237,7 @@ export default function Login({ onLogin, initialTab = 'login' }) {
   const blackRef = useRef(null);
   const yellowRef = useRef(null);
   const orangeRef = useRef(null);
+  const googleCallbackRef = useRef(null);
 
   useEffect(() => {
     const handleMouseMove = (e) => {
@@ -323,37 +327,55 @@ export default function Login({ onLogin, initialTab = 'login' }) {
   const yellowPos = calculatePosition(yellowRef);
   const orangePos = calculatePosition(orangeRef);
 
+  // Keep the ref always pointing to the latest callback
+  useEffect(() => {
+    googleCallbackRef.current = handleGoogleSignInResponse;
+  });
+
   // Google Identity Services (GIS) integration
   useEffect(() => {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
     if (!clientId) return;
 
-    // Load GIS SDK script dynamically
-    const script = document.createElement('script');
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.defer = true;
-    script.onload = () => {
-      if (window.google) {
-        window.google.accounts.id.initialize({
-          client_id: clientId,
-          callback: handleGoogleSignInResponse,
-          auto_select: false,
-          ux_mode: 'popup'
-        });
-        window.google.accounts.id.renderButton(
-          document.getElementById('google-signin-btn-container'),
-          { theme: 'outline', size: 'large', width: '100%', text: 'signin_with' }
-        );
-        window.google.accounts.id.prompt(); // One Tap prompt
+    // Stable wrapper that delegates to the ref
+    const stableCallback = (response) => {
+      if (googleCallbackRef.current) {
+        googleCallbackRef.current(response);
       }
     };
-    document.body.appendChild(script);
 
-    return () => {
-      document.body.removeChild(script);
+    // Load GIS SDK script dynamically (only once)
+    const existingScript = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
+    const initGIS = () => {
+      if (!window.google) return;
+      window.google.accounts.id.initialize({
+        client_id: clientId,
+        callback: stableCallback,
+        auto_select: false,
+        ux_mode: 'popup'
+      });
+      // Render the button into the container if it exists
+      const container = document.getElementById('google-signin-btn-container');
+      if (container) {
+        container.innerHTML = ''; // clear previous render
+        window.google.accounts.id.renderButton(
+          container,
+          { theme: 'outline', size: 'large', width: '100%', text: 'signin_with' }
+        );
+      }
     };
-  }, []);
+
+    if (existingScript && window.google) {
+      initGIS();
+    } else if (!existingScript) {
+      const script = document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.defer = true;
+      script.onload = initGIS;
+      document.body.appendChild(script);
+    }
+  }, [activeTab]);
 
   const handleGoogleSignInResponse = async (response) => {
     setAuthGoogleLoading(true);
@@ -594,14 +616,6 @@ export default function Login({ onLogin, initialTab = 'login' }) {
 
       {/* Left Column: Animated Cartoon Characters */}
       <div className="relative hidden lg:flex flex-col justify-between p-12 overflow-hidden">
-        <div className="relative z-20">
-          <div className="flex items-center gap-2 text-lg font-black text-[#2d4771]">
-            <div className="size-8 rounded-lg bg-[#6E9AE0]/20 flex items-center justify-center">
-              <Sparkles className="size-4 text-[#6E9AE0]" />
-            </div>
-            <span>Academic Synergy</span>
-          </div>
-        </div>
 
         <div className="relative z-20 flex items-end justify-center h-[500px]">
           <div className="relative" style={{ width: '550px', height: '400px' }}>
@@ -931,7 +945,6 @@ export default function Login({ onLogin, initialTab = 'login' }) {
                     <option value="4">Giảng viên</option>
                     <option value="5">Cựu sinh viên</option>
                     <option value="6">Nhà tuyển dụng</option>
-                    <option value="2">Cán bộ quản lý</option>
                   </select>
                 </div>
                 <div>
@@ -1033,7 +1046,6 @@ export default function Login({ onLogin, initialTab = 'login' }) {
                     <option value="4">Giảng viên</option>
                     <option value="5">Cựu sinh viên</option>
                     <option value="6">Nhà tuyển dụng</option>
-                    <option value="2">Cán bộ quản lý</option>
                   </select>
                 </div>
                 <div>
@@ -1111,8 +1123,21 @@ export default function Login({ onLogin, initialTab = 'login' }) {
 
               {/* Social Login Buttons */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {/* Google Sign-in Official GIS Button */}
-                <div id="google-signin-btn-container" style={{ width: '100%', minHeight: 40, display: 'flex', justifyContent: 'center' }}></div>
+                {/* Google Sign-in: GIS button if Client ID exists, otherwise placeholder */}
+                {import.meta.env.VITE_GOOGLE_CLIENT_ID ? (
+                  <div id="google-signin-btn-container" style={{ width: '100%', minHeight: 40, display: 'flex', justifyContent: 'center' }}></div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => { setShowMockGoogleModal(true); setError(''); }}
+                    style={{ width: '100%', padding: '10px 16px', borderRadius: 12, border: '1.5px solid #D2DBEA', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: 'pointer', fontWeight: 600, fontSize: 13, color: '#4a6fa5', transition: 'all 0.2s' }}
+                    onMouseOver={e => e.currentTarget.style.background = '#F9FAFD'}
+                    onMouseOut={e => e.currentTarget.style.background = '#fff'}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59A14.5 14.5 0 019.5 24c0-1.59.28-3.14.76-4.59l-7.98-6.19A23.99 23.99 0 000 24c0 3.77.9 7.35 2.56 10.53l7.97-5.94z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 5.94C6.51 42.62 14.62 48 24 48z"/></svg>
+                    Đăng nhập bằng Google (Thử nghiệm Local)
+                  </button>
+                )}
 
                 <button
                   onClick={() => { setShowDemoAccounts(true); setError(''); }}
@@ -1157,6 +1182,66 @@ export default function Login({ onLogin, initialTab = 'login' }) {
                   {demoLoading === acc.email && <Loader2 size={16} color={acc.color} className="animate-spin" style={{ flexShrink: 0 }} />}
                 </button>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mock Google Login Modal */}
+      {showMockGoogleModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+          onClick={e => e.target === e.currentTarget && setShowMockGoogleModal(false)}
+        >
+          <div style={{ background: '#fff', borderRadius: 20, padding: '32px 28px', width: '100%', maxWidth: 420, boxShadow: '0 24px 64px rgba(0,0,0,0.3)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <div>
+                <h2 style={{ fontSize: 18, fontWeight: 800, color: '#0d1c2f', marginBottom: 4 }}>Giả lập Đăng nhập Google</h2>
+                <p style={{ fontSize: 13, color: '#718096' }}>Nhập thông tin giả lập tài khoản Google để thử nghiệm</p>
+              </div>
+              <button onClick={() => setShowMockGoogleModal(false)} style={{ background: '#F9FAFD', border: '1px solid #D2DBEA', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#718096' }}>×</button>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div>
+                <label style={labelStyle}>Email Google giả lập</label>
+                <input
+                  type="email" required placeholder="Ví dụ: user@gmail.com" value={mockGoogleEmail}
+                  onChange={e => setMockGoogleEmail(e.target.value)}
+                  style={inputStyle}
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>Họ và Tên Google giả lập</label>
+                <input
+                  type="text" required placeholder="Ví dụ: Nguyễn Văn Google" value={mockGoogleName}
+                  onChange={e => setMockGoogleName(e.target.value)}
+                  style={inputStyle}
+                />
+              </div>
+              
+              <div style={{ display: 'flex', gap: 12, marginTop: 10 }}>
+                <button type="button" onClick={() => setShowMockGoogleModal(false)}
+                  style={{ flex: 1, padding: '12px', borderRadius: 12, border: '1.5px solid #D2DBEA', background: '#fff', color: '#718096', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>
+                  Hủy
+                </button>
+                <button type="button"
+                  onClick={async () => {
+                    setShowMockGoogleModal(false);
+                    try {
+                      const header = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }));
+                      const payload = btoa(unescape(encodeURIComponent(JSON.stringify({ email: mockGoogleEmail.trim(), name: mockGoogleName.trim() }))));
+                      const signature = "signature";
+                      const mockCredential = `${header}.${payload}.${signature}`;
+                      await googleCallbackRef.current({ credential: mockCredential });
+                    } catch (err) {
+                      setError('Không thể xử lý thông tin giả lập.');
+                    }
+                  }}
+                  style={{ flex: 1.5, padding: '12px', borderRadius: 12, background: 'linear-gradient(135deg, #6E9AE0, #487bc9)', color: '#fff', fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer', boxShadow: '0 4px 14px rgba(110,154,224,0.35)' }}
+                >
+                  Xác nhận Đăng nhập
+                </button>
+              </div>
             </div>
           </div>
         </div>
