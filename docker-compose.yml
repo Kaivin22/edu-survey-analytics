@@ -24,6 +24,8 @@ services:
       dockerfile: Dockerfile
       args:
         - VITE_API_URL=http://localhost:5000/api
+        # Để bật Google Login, bỏ comment dòng dưới và điền Client ID thực:
+        # - VITE_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
     image: edu-survey-frontend:latest
     container_name: edu_survey_frontend
     ports:

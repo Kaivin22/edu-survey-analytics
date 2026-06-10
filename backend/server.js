@@ -63,6 +63,31 @@ async function startServer() {
       console.log('Database schema synchronized.');
     }
 
+    // Ensure at least one Admin user exists (Genesis Admin)
+    try {
+      const { User } = require('./models');
+      const adminExists = await User.findOne({ where: { roleId: 1 } });
+      if (!adminExists) {
+        console.log('No Admin account found in database. Creating genesis Admin...');
+        const bcrypt = require('bcryptjs');
+        const adminEmail = process.env.ADMIN_EMAIL || 'admin@edu.vn';
+        const adminPassword = process.env.ADMIN_PASSWORD || '12345678';
+        const hashedPw = await bcrypt.hash(adminPassword, 10);
+        await User.create({
+          email: adminEmail,
+          password: hashedPw,
+          fullName: 'Nguyễn Quản Trị',
+          code: 'ADMIN001',
+          roleId: 1,
+          school: 'Kiến trúc Đà Nẵng (DAU)',
+          department: 'Công nghệ thông tin'
+        });
+        console.log(`Genesis Admin created successfully: ${adminEmail}`);
+      }
+    } catch (dbError) {
+      console.error('Error checking/creating genesis Admin account:', dbError);
+    }
+
     app.listen(PORT, () => {
       console.log(`==================================================`);
       console.log(`Backend Server is running on port ${PORT}`);
