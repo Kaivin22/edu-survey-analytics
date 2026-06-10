@@ -31,14 +31,18 @@ const CLASSES = {
   "Kinh tế số & Thương mại điện tử": ["22EC1"]
 };
 
-const DEMO_ACCOUNTS = [
-  { email: 'admin@edu.vn',     name: 'Nguyễn Quản Trị',    role: 'Admin',    avatar: '👑', color: '#ef4444' },
-  { email: 'manager@edu.vn',   name: 'Trần Cán Bộ',       role: 'Manager',  avatar: '📊', color: '#8b5cf6' },
-  { email: 'student1@edu.vn',  name: 'Trần Kim Liên',      role: 'Student',  avatar: '🎓', color: '#6E9AE0' },
-  { email: 'lecturer1@edu.vn', name: 'Phạm Giảng Viên',    role: 'Lecturer', avatar: '📚', color: '#22c55e' },
-  { email: 'alumnus1@edu.vn',  name: 'Hoàng Cựu SV',       role: 'Alumnus',  avatar: '🏢', color: '#f59e0b' },
-  { email: 'employer1@edu.vn', name: 'FPT Software (Đại diện)', role: 'Employer', avatar: '💼', color: '#06b6d4' },
-];
+const DEMO_ACCOUNTS = import.meta.env.PROD
+  ? [
+      { email: 'admin@edu.vn',     name: 'Nguyễn Quản Trị',    role: 'Admin',    avatar: '👑', color: '#ef4444' }
+    ]
+  : [
+      { email: 'admin@edu.vn',     name: 'Nguyễn Quản Trị',    role: 'Admin',    avatar: '👑', color: '#ef4444' },
+      { email: 'manager@edu.vn',   name: 'Trần Cán Bộ',       role: 'Manager',  avatar: '📊', color: '#8b5cf6' },
+      { email: 'student1@edu.vn',  name: 'Trần Kim Liên',      role: 'Student',  avatar: '🎓', color: '#6E9AE0' },
+      { email: 'lecturer1@edu.vn', name: 'Phạm Giảng Viên',    role: 'Lecturer', avatar: '📚', color: '#22c55e' },
+      { email: 'alumnus1@edu.vn',  name: 'Hoàng Cựu SV',       role: 'Alumnus',  avatar: '🏢', color: '#f59e0b' },
+      { email: 'employer1@edu.vn', name: 'FPT Software (Đại diện)', role: 'Employer', avatar: '💼', color: '#06b6d4' },
+    ];
 
 const ROLE_LABELS = { Admin:'Quản trị viên', Manager:'Cán bộ quản lý', Student:'Sinh viên', Lecturer:'Giảng viên', Alumnus:'Cựu sinh viên', Employer:'Nhà tuyển dụng' };
 
