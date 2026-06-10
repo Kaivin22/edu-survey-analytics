@@ -61,6 +61,18 @@ async function startServer() {
       console.log('Syncing database schema...');
       await sequelize.sync();
       console.log('Database schema synchronized.');
+
+      try {
+        const { Role } = require('./models');
+        const roleCount = await Role.count();
+        if (roleCount === 0) {
+          console.log('Roles table is empty. Running auto-seeding for PostgreSQL...');
+          const seed = require('./scripts/initDb');
+          await seed();
+        }
+      } catch (seedError) {
+        console.error('Error auto-seeding database:', seedError);
+      }
     }
 
     // Ensure at least one Admin user exists (Genesis Admin)
