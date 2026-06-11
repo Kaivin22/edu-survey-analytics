@@ -5,6 +5,33 @@ import { LogOut, ClipboardList, Users, BarChart3, Plus, Trash2, Edit, FileSpread
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const TARGET_LABELS = { Student: 'Sinh viên', Lecturer: 'Giảng viên', Alumnus: 'Cựu sinh viên', Employer: 'Nhà tuyển dụng', All: 'Tất cả' };
+const ROLE_LABELS = { Admin: 'Quản trị viên', Manager: 'Cán bộ quản lý', Student: 'Sinh viên', Lecturer: 'Giảng viên', Alumnus: 'Cựu sinh viên', Employer: 'Nhà tuyển dụng' };
+
+const SCHOOLS = ["Kiến trúc Đà Nẵng (DAU)", "Việt Hàn (VKU)"];
+
+const DEPARTMENTS = {
+  "Kiến trúc Đà Nẵng (DAU)": [
+    "Công nghệ thông tin",
+    "Kiến trúc",
+    "Xây dựng",
+    "Kinh tế"
+  ],
+  "Việt Hàn (VKU)": [
+    "Khoa học Máy tính",
+    "Kỹ thuật Máy tính",
+    "Kinh tế số & Thương mại điện tử"
+  ]
+};
+
+const CLASSES = {
+  "Công nghệ thông tin": ["22CT1", "22CT2", "22CT3", "22CT4"],
+  "Kiến trúc": ["22KT1", "22KT2"],
+  "Xây dựng": ["22XD1"],
+  "Kinh tế": ["22KTQD1"],
+  "Khoa học Máy tính": ["22IT1", "22IT2"],
+  "Kỹ thuật Máy tính": ["22CE1"],
+  "Kinh tế số & Thương mại điện tử": ["22EC1"]
+};
 
 function AdminDashboard({ user, onLogout, onUpdateUser }) {
   const [surveys, setSurveys] = useState([]);
@@ -14,6 +41,24 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
   const [activeTab, setActiveTab] = useState('surveys');
   const [stats, setStats] = useState({ total: 0, active: 0, users: 0 });
   const [userFilters, setUserFilters] = useState({ role: '', school: '', department: '', class: '' });
+
+  // Modal User Form States
+  const [showUserModal, setShowUserModal] = useState(false);
+  const [modalMode, setModalMode] = useState('create'); // 'create' | 'edit'
+  const [editingUserId, setEditingUserId] = useState(null);
+  const [userForm, setUserForm] = useState({
+    email: '',
+    password: '',
+    fullName: '',
+    code: '',
+    roleId: '',
+    school: '',
+    department: '',
+    class: ''
+  });
+  const [modalError, setModalError] = useState('');
+  const [modalSuccess, setModalSuccess] = useState('');
+  const [modalLoading, setModalLoading] = useState(false);
 
   const filteredAccounts = accounts.filter(acc => {
     if (userFilters.role) {
@@ -73,6 +118,111 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
       body: JSON.stringify({ roleId: parseInt(roleId) }),
     });
     if (res.ok) { alert('Đã cập nhật vai trò!'); fetchAccounts(); } else { const d = await res.json(); alert(d.message); }
+  };
+
+  const openCreateModal = () => {
+    setModalMode('create');
+    setEditingUserId(null);
+    setUserForm({
+      email: '',
+      password: '',
+      fullName: '',
+      code: '',
+      roleId: roles.length > 0 ? roles[0].id : '',
+      school: '',
+      department: '',
+      class: ''
+    });
+    setModalError('');
+    setModalSuccess('');
+    setShowUserModal(true);
+  };
+
+  const openEditModal = (acc) => {
+    setModalMode('edit');
+    setEditingUserId(acc.id);
+    setUserForm({
+      email: acc.email,
+      password: '',
+      fullName: acc.fullName || '',
+      code: acc.code || '',
+      roleId: acc.roleId || '',
+      school: acc.school || '',
+      department: acc.department || '',
+      class: acc.class || ''
+    });
+    setModalError('');
+    setModalSuccess('');
+    setShowUserModal(true);
+  };
+
+  const handleSaveUser = async (e) => {
+    e.preventDefault();
+    setModalError('');
+    setModalSuccess('');
+    
+    if (!userForm.email || !userForm.fullName || !userForm.roleId) {
+      setModalError('Vui lòng điền đầy đủ các trường bắt buộc (Email, Họ tên, Vai trò).');
+      return;
+    }
+    if (modalMode === 'create' && !userForm.password) {
+      setModalError('Mật khẩu là bắt buộc khi tạo tài khoản mới.');
+      return;
+    }
+
+    // Code validation
+    if (userForm.code) {
+      const selectedRoleObj = roles.find(r => r.id === parseInt(userForm.roleId));
+      const isStudent = selectedRoleObj?.name === 'Student';
+      if (isStudent) {
+        if (!/^\d{8,12}$/.test(userForm.code.trim())) {
+          setModalError('Mã số sinh viên (MSSV) phải gồm từ 8 đến 12 chữ số.');
+          return;
+        }
+      } else {
+        if (!/^[a-zA-Z0-9]+$/.test(userForm.code.trim())) {
+          setModalError('Mã nhận diện chỉ được phép chứa chữ cái và số (không có ký tự đặc biệt hay khoảng trắng).');
+          return;
+        }
+      }
+    }
+
+    setModalLoading(true);
+    try {
+      const url = modalMode === 'create' ? `${API_URL}/users` : `${API_URL}/users/${editingUserId}`;
+      const method = modalMode === 'create' ? 'POST' : 'PUT';
+      const bodyData = {
+        email: userForm.email,
+        fullName: userForm.fullName,
+        code: userForm.code || null,
+        roleId: parseInt(userForm.roleId),
+        school: userForm.school || null,
+        department: userForm.department || null,
+        class: userForm.class || null
+      };
+      if (userForm.password) {
+        bodyData.password = userForm.password;
+      }
+      
+      const res = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(bodyData)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      
+      setModalSuccess(data.message || 'Thành công!');
+      fetchAccounts();
+      setTimeout(() => setShowUserModal(false), 1000);
+    } catch (err) {
+      setModalError(err.message || 'Đã xảy ra lỗi.');
+    } finally {
+      setModalLoading(false);
+    }
   };
 
   // Reusable stat card
@@ -241,9 +391,18 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
         {/* ── Tab: Accounts (Admin only) ── */}
         {activeTab === 'accounts' && user.role === 'Admin' && (
           <div className="space-y-5">
-            <div>
-              <h2 className="text-xl font-extrabold" style={{ color: '#2d4771' }}>Quản lý Phân Quyền Tài Khoản</h2>
-              <p className="text-xs mt-0.5" style={{ color: '#6E9AE0' }}>Thay đổi vai trò trực tiếp qua dropdown — hiệu lực tức thì</p>
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-xl font-extrabold" style={{ color: '#2d4771' }}>Quản lý Phân Quyền Tài Khoản</h2>
+                <p className="text-xs mt-0.5" style={{ color: '#6E9AE0' }}>Thay đổi vai trò trực tiếp qua dropdown hoặc tạo/sửa thông tin tài khoản</p>
+              </div>
+              <button
+                onClick={openCreateModal}
+                className="px-5 py-2.5 text-white font-bold rounded-2xl shadow-md transition-all text-sm flex items-center gap-2"
+                style={{ background: 'linear-gradient(135deg, #6E9AE0, #487bc9)' }}
+              >
+                <Plus size={17} /> Tạo Tài Khoản Mới
+              </button>
             </div>
 
             {/* Filter Bar */}
@@ -275,25 +434,29 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
               </select>
 
               {/* Department filter */}
-              <select value={userFilters.department} disabled={!userFilters.school} onChange={e => setUserFilters(f => ({ ...f, department: e.target.value }))} style={{ padding: '7px 14px', borderRadius: 12, border: '1.5px solid #D2DBEA', background: '#fff', color: '#2d4771', fontSize: 13, fontWeight: 600, outline: 'none', opacity: userFilters.school ? 1 : 0.5 }}>
+              <select value={userFilters.department} disabled={!userFilters.school} onChange={e => setUserFilters(f => ({ ...f, department: e.target.value, class: '' }))} style={{ padding: '7px 14px', borderRadius: 12, border: '1.5px solid #D2DBEA', background: '#fff', color: '#2d4771', fontSize: 13, fontWeight: 600, outline: 'none', opacity: userFilters.school ? 1 : 0.5 }}>
                 <option value="">📚 Tất cả khoa</option>
-                {(userFilters.school === 'Kiến trúc Đà Nẵng (DAU)' 
-                  ? ['Công nghệ thông tin', 'Kiến trúc', 'Xây dựng', 'Kinh tế'] 
-                  : userFilters.school === 'Việt Hàn (VKU)'
-                    ? ['Khoa học Máy tính', 'Kỹ thuật Máy tính', 'Kinh tế số & Thương mại điện tử']
-                    : ['Công nghệ thông tin', 'Kiến trúc', 'Xây dựng', 'Kinh tế', 'Khoa học Máy tính', 'Kỹ thuật Máy tính', 'Kinh tế số & Thương mại điện tử']
-                ).map(d => (
+                {(DEPARTMENTS[userFilters.school] || []).map(d => (
                   <option key={d} value={d}>{d}</option>
                 ))}
               </select>
 
               {/* Class filter */}
-              <input
+              <select
                 value={userFilters.class}
+                disabled={!userFilters.department}
                 onChange={e => setUserFilters(f => ({ ...f, class: e.target.value }))}
-                placeholder="🎓 Nhập lớp..."
-                style={{ padding: '7px 14px', borderRadius: 12, border: '1.5px solid #D2DBEA', background: '#fff', color: '#2d4771', fontSize: 13, fontWeight: 600, width: 150, outline: 'none' }}
-              />
+                style={{
+                  padding: '7px 14px', borderRadius: 12, border: '1.5px solid #D2DBEA',
+                  background: '#fff', color: '#2d4771', fontSize: 13, fontWeight: 600,
+                  outline: 'none', opacity: userFilters.department ? 1 : 0.5
+                }}
+              >
+                <option value="">🎓 Tất cả lớp</option>
+                {(CLASSES[userFilters.department] || []).map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
 
               {/* Reset filter */}
               {(userFilters.role || userFilters.school || userFilters.department || userFilters.class) && (
@@ -308,7 +471,7 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
                 <table className="w-full text-left">
                   <thead>
                     <tr style={{ background: '#EEF4FD', borderBottom: '2px solid #D2DBEA' }}>
-                      {['Mã nhận diện', 'Họ và tên', 'Email', 'Vai trò', 'Trường / Khoa', 'Xóa'].map(h => (
+                      {['Mã nhận diện', 'Họ và tên', 'Email', 'Vai trò', 'Trường / Khoa', 'Sửa', 'Xóa'].map(h => (
                         <th key={h} className="py-3.5 px-5 text-xs font-extrabold uppercase tracking-wide" style={{ color: '#6E9AE0' }}>{h}</th>
                       ))}
                     </tr>
@@ -327,7 +490,7 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
                             className="rounded-xl px-2 py-1 text-xs font-bold outline-none border disabled:opacity-40"
                             style={{ background: '#EEF4FD', borderColor: '#D2DBEA', color: '#2d4771' }}
                           >
-                            {roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                            {roles.map(r => <option key={r.id} value={r.id}>{ROLE_LABELS[r.name] || r.name}</option>)}
                           </select>
                         </td>
                         <td className="py-3.5 px-5 text-xs" style={{ color: '#2d4771' }}>
@@ -338,6 +501,15 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
                               {acc.class && ` › ${acc.class}`}
                             </div>
                           ) : '—'}
+                        </td>
+                        <td className="py-3.5 px-5">
+                          <button
+                            onClick={() => openEditModal(acc)}
+                            className="p-2 rounded-xl transition-all"
+                            style={{ background: '#FFFBEB', color: '#D97706' }}
+                          >
+                            <Edit size={15} />
+                          </button>
                         </td>
                         <td className="py-3.5 px-5">
                           <button
@@ -370,6 +542,159 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
           <ProfileEditForm user={user} API_URL={API_URL} token={token} onUpdateUser={onUpdateUser} />
         )}
 
+        {/* Modal User Form */}
+        {showUserModal && (
+          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl border shadow-2xl max-w-lg w-full p-6 animate-fade-in space-y-4" style={{ borderColor: '#D2DBEA' }}>
+              <div className="flex justify-between items-center pb-3 border-b border-slate-100">
+                <h3 className="font-extrabold text-lg" style={{ color: '#2d4771' }}>
+                  {modalMode === 'create' ? 'Tạo Tài Khoản Mới' : 'Chỉnh Sửa Tài Khoản'}
+                </h3>
+                <button onClick={() => setShowUserModal(false)} className="text-slate-400 hover:text-slate-600 font-bold text-sm">✕</button>
+              </div>
+              
+              {modalError && <div className="p-3 rounded-2xl text-xs border" style={{ background: '#fff5f5', borderColor: '#fecaca', color: '#dc2626' }}>{modalError}</div>}
+              {modalSuccess && <div className="p-3 rounded-2xl text-xs border" style={{ background: '#f0fdf4', borderColor: '#bbf7d0', color: '#16a34a' }}>{modalSuccess}</div>}
+
+              <form onSubmit={handleSaveUser} className="space-y-4 text-xs font-semibold">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block mb-1" style={{ color: '#2d4771' }}>Địa chỉ Email *</label>
+                    <input
+                      type="email" required
+                      disabled={modalMode === 'edit'}
+                      className="w-full px-3 py-2 rounded-xl border outline-none disabled:opacity-60"
+                      style={{ background: '#F9FAFD', borderColor: '#D2DBEA', color: '#2d4771' }}
+                      value={userForm.email}
+                      onChange={e => setUserForm(f => ({ ...f, email: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="block mb-1" style={{ color: '#2d4771' }}>
+                      {modalMode === 'create' ? 'Mật khẩu *' : 'Đổi mật khẩu (nếu muốn)'}
+                    </label>
+                    <input
+                      type="password"
+                      required={modalMode === 'create'}
+                      placeholder={modalMode === 'edit' ? 'Để trống nếu không đổi' : ''}
+                      className="w-full px-3 py-2 rounded-xl border outline-none"
+                      style={{ background: '#F9FAFD', borderColor: '#D2DBEA', color: '#2d4771' }}
+                      value={userForm.password}
+                      onChange={e => setUserForm(f => ({ ...f, password: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block mb-1" style={{ color: '#2d4771' }}>Họ và Tên *</label>
+                    <input
+                      type="text" required
+                      className="w-full px-3 py-2 rounded-xl border outline-none"
+                      style={{ background: '#F9FAFD', borderColor: '#D2DBEA', color: '#2d4771' }}
+                      value={userForm.fullName}
+                      onChange={e => setUserForm(f => ({ ...f, fullName: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="block mb-1" style={{ color: '#2d4771' }}>Mã nhận diện (MSSV/MSGV/MST)</label>
+                    <input
+                      type="text"
+                      className="w-full px-3 py-2 rounded-xl border outline-none"
+                      style={{ background: '#F9FAFD', borderColor: '#D2DBEA', color: '#2d4771' }}
+                      value={userForm.code}
+                      onChange={e => setUserForm(f => ({ ...f, code: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block mb-1" style={{ color: '#2d4771' }}>Vai trò *</label>
+                  <select
+                    required
+                    className="w-full px-3 py-2 rounded-xl border outline-none"
+                    style={{ background: '#F9FAFD', borderColor: '#D2DBEA', color: '#2d4771' }}
+                    value={userForm.roleId}
+                    onChange={e => {
+                      const rId = e.target.value;
+                      const selectedRoleObj = roles.find(r => r.id === parseInt(rId));
+                      const isStudent = selectedRoleObj?.name === 'Student';
+                      setUserForm(f => ({ 
+                        ...f, 
+                        roleId: rId, 
+                        class: isStudent ? f.class : ''
+                      }));
+                    }}
+                  >
+                    <option value="">Chọn vai trò...</option>
+                    {roles.map(r => <option key={r.id} value={r.id}>{ROLE_LABELS[r.name] || r.name}</option>)}
+                  </select>
+                </div>
+
+                {/* School, Department, Class dynamic selection */}
+                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-dashed" style={{ borderColor: '#D2DBEA' }}>
+                  <div>
+                    <label className="block mb-1" style={{ color: '#2d4771' }}>Trường</label>
+                    <select
+                      className="w-full px-2 py-2 rounded-xl border outline-none"
+                      style={{ background: '#F9FAFD', borderColor: '#D2DBEA', color: '#2d4771' }}
+                      value={userForm.school}
+                      onChange={e => setUserForm(f => ({ ...f, school: e.target.value, department: '', class: '' }))}
+                    >
+                      <option value="">Chọn...</option>
+                      {SCHOOLS.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block mb-1" style={{ color: '#2d4771' }}>Khoa</label>
+                    <select
+                      className="w-full px-2 py-2 rounded-xl border outline-none"
+                      disabled={!userForm.school}
+                      style={{ background: '#F9FAFD', borderColor: '#D2DBEA', color: '#2d4771' }}
+                      value={userForm.department}
+                      onChange={e => setUserForm(f => ({ ...f, department: e.target.value, class: '' }))}
+                    >
+                      <option value="">Chọn...</option>
+                      {(DEPARTMENTS[userForm.school] || []).map(d => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block mb-1" style={{ color: '#2d4771' }}>Lớp</label>
+                    <select
+                      className="w-full px-2 py-2 rounded-xl border outline-none"
+                      disabled={!userForm.department || roles.find(r => r.id === parseInt(userForm.roleId))?.name !== 'Student'}
+                      style={{ background: '#F9FAFD', borderColor: '#D2DBEA', color: '#2d4771' }}
+                      value={userForm.class}
+                      onChange={e => setUserForm(f => ({ ...f, class: e.target.value }))}
+                    >
+                      <option value="">Chọn...</option>
+                      {(CLASSES[userForm.department] || []).map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowUserModal(false)}
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-all font-bold"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={modalLoading}
+                    className="px-4 py-2 text-white font-bold rounded-xl shadow-md transition-all disabled:opacity-50"
+                    style={{ background: 'linear-gradient(135deg, #6E9AE0, #487bc9)' }}
+                  >
+                    {modalLoading ? 'Đang xử lý...' : 'Lưu lại'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
       </main>
     </div>
   );
@@ -393,6 +718,23 @@ function ProfileEditForm({ user, API_URL, token, onUpdateUser }) {
     e.preventDefault();
     setError(''); setSuccess('');
     if (!form.fullName.trim()) { setError('Họ tên không được để trống.'); return; }
+    
+    // Code validation
+    if (form.code.trim()) {
+      const isStudent = user.role === 'Student';
+      if (isStudent) {
+        if (!/^\d{8,12}$/.test(form.code.trim())) {
+          setError('Mã số sinh viên (MSSV) phải gồm từ 8 đến 12 chữ số.');
+          return;
+        }
+      } else {
+        if (!/^[a-zA-Z0-9]+$/.test(form.code.trim())) {
+          setError('Mã nhận diện chỉ được phép chứa chữ cái và số (không có ký tự đặc biệt hay khoảng trắng).');
+          return;
+        }
+      }
+    }
+
     if (form.newPassword) {
       if (!form.currentPassword) { setError('Vui lòng nhập mật khẩu hiện tại để đổi mật khẩu mới.'); return; }
       if (form.newPassword.length < 8) { setError('Mật khẩu mới phải từ 8 ký tự trở lên.'); return; }

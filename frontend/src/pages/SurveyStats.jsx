@@ -5,9 +5,30 @@ import { ArrowLeft, FileSpreadsheet, FileText, File, ChevronDown, Users, BarChar
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 const TARGET_LABELS = { Student: 'Sinh viên', Lecturer: 'Giảng viên', Alumnus: 'Cựu sinh viên', Employer: 'Nhà tuyển dụng', All: 'Tất cả' };
 
-const SCHOOLS = {
-  'DAU': { label: 'Kiến trúc Đà Nẵng (DAU)', departments: ['Kiến trúc', 'Quy hoạch đô thị', 'Nội thất', 'Mỹ thuật công nghiệp', 'Xây dựng'] },
-  'VKU': { label: 'Việt Hàn (VKU)',           departments: ['Công nghệ thông tin', 'Kỹ thuật máy tính', 'Điện tử viễn thông', 'Thương mại điện tử', 'Quản trị kinh doanh'] },
+const SCHOOLS = ["Kiến trúc Đà Nẵng (DAU)", "Việt Hàn (VKU)"];
+
+const DEPARTMENTS = {
+  "Kiến trúc Đà Nẵng (DAU)": [
+    "Công nghệ thông tin",
+    "Kiến trúc",
+    "Xây dựng",
+    "Kinh tế"
+  ],
+  "Việt Hàn (VKU)": [
+    "Khoa học Máy tính",
+    "Kỹ thuật Máy tính",
+    "Kinh tế số & Thương mại điện tử"
+  ]
+};
+
+const CLASSES = {
+  "Công nghệ thông tin": ["22CT1", "22CT2", "22CT3", "22CT4"],
+  "Kiến trúc": ["22KT1", "22KT2"],
+  "Xây dựng": ["22XD1"],
+  "Kinh tế": ["22KTQD1"],
+  "Khoa học Máy tính": ["22IT1", "22IT2"],
+  "Kỹ thuật Máy tính": ["22CE1"],
+  "Kinh tế số & Thương mại điện tử": ["22EC1"]
 };
 
 const EXPORT_OPTIONS = [
@@ -126,7 +147,8 @@ function ExportDropdown({ surveyId, token, filters }) {
 
 // ── Filter Bar ─────────────────────────────────────────────────────────────
 function FilterBar({ filters, onChange, onClear }) {
-  const depts = filters.school ? (SCHOOLS[filters.school]?.departments || []) : [];
+  const depts = filters.school ? (DEPARTMENTS[filters.school] || []) : [];
+  const classes = filters.department ? (CLASSES[filters.department] || []) : [];
   const hasFilter = filters.school || filters.department || filters.class;
 
   const selStyle = {
@@ -149,8 +171,8 @@ function FilterBar({ filters, onChange, onClear }) {
       {/* School */}
       <select value={filters.school} onChange={e => onChange({ school: e.target.value, department: '', class: '' })} style={selStyle}>
         <option value="">🏫 Tất cả trường</option>
-        {Object.entries(SCHOOLS).map(([k, v]) => (
-          <option key={k} value={k}>{v.label}</option>
+        {SCHOOLS.map(sc => (
+          <option key={sc} value={sc}>{sc}</option>
         ))}
       </select>
 
@@ -161,13 +183,15 @@ function FilterBar({ filters, onChange, onClear }) {
       </select>
 
       {/* Class */}
-      <input
+      <select
         value={filters.class}
         onChange={e => onChange({ ...filters, class: e.target.value })}
-        placeholder="🎓 Nhập lớp (VD: CNTT1)"
-        style={{ ...selStyle, minWidth: 170 }}
+        style={{ ...selStyle, opacity: classes.length ? 1 : 0.4 }}
         disabled={!filters.department}
-      />
+      >
+        <option value="">🎓 Tất cả lớp</option>
+        {classes.map(cl => <option key={cl} value={cl}>{cl}</option>)}
+      </select>
 
       {/* Clear */}
       {hasFilter && (

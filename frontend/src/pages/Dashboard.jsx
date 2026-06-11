@@ -1,18 +1,42 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { LogOut, ClipboardList, Bell, User, Calendar, FileText, CheckCircle, Clock, School } from 'lucide-react';
+import { LogOut, ClipboardList, Bell, User, Calendar, FileText, CheckCircle, Clock, School, Eye, FileSpreadsheet, Edit, Trash2, Plus, HelpCircle } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const ROLE_LABELS = { Student: 'Sinh viên', Lecturer: 'Giảng viên', Alumnus: 'Cựu sinh viên', Employer: 'Nhà tuyển dụng', Admin: 'Quản trị viên', Manager: 'Cán bộ quản lý' };
+const TARGET_LABELS = { Student: 'Sinh viên', Lecturer: 'Giảng viên', Alumnus: 'Cựu sinh viên', Employer: 'Nhà tuyển dụng', All: 'Tất cả' };
 
-const SCHOOLS = {
-  'DAU': { label: 'Kiến trúc Đà Nẵng (DAU)', departments: ['Kiến trúc', 'Quy hoạch đô thị', 'Nội thất', 'Mỹ thuật công nghiệp', 'Xây dựng'] },
-  'VKU': { label: 'Việt Hàn (VKU)',           departments: ['Công nghệ thông tin', 'Kỹ thuật máy tính', 'Điện tử viễn thông', 'Thương mại điện tử', 'Quản trị kinh doanh'] },
+const SCHOOLS = ["Kiến trúc Đà Nẵng (DAU)", "Việt Hàn (VKU)"];
+
+const DEPARTMENTS = {
+  "Kiến trúc Đà Nẵng (DAU)": [
+    "Công nghệ thông tin",
+    "Kiến trúc",
+    "Xây dựng",
+    "Kinh tế"
+  ],
+  "Việt Hàn (VKU)": [
+    "Khoa học Máy tính",
+    "Kỹ thuật Máy tính",
+    "Kinh tế số & Thương mại điện tử"
+  ]
+};
+
+const CLASSES = {
+  "Công nghệ thông tin": ["22CT1", "22CT2", "22CT3", "22CT4"],
+  "Kiến trúc": ["22KT1", "22KT2"],
+  "Xây dựng": ["22XD1"],
+  "Kinh tế": ["22KTQD1"],
+  "Khoa học Máy tính": ["22IT1", "22IT2"],
+  "Kỹ thuật Máy tính": ["22CE1"],
+  "Kinh tế số & Thương mại điện tử": ["22EC1"]
 };
 
 function Dashboard({ user, onLogout, onUpdateUser }) {
   const [surveys, setSurveys] = useState([]);
+  const [createdSurveys, setCreatedSurveys] = useState([]);
+  const [createdSurveysLoading, setCreatedSurveysLoading] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('surveys');
@@ -21,7 +45,13 @@ function Dashboard({ user, onLogout, onUpdateUser }) {
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
 
-  useEffect(() => { fetchSurveys(); fetchNotifications(); }, []);
+  useEffect(() => {
+    fetchSurveys();
+    fetchNotifications();
+    if (['Admin', 'Manager', 'Lecturer', 'Employer'].includes(user.role)) {
+      fetchCreatedSurveys();
+    }
+  }, []);
 
   const fetchSurveys = async () => {
     try {
@@ -29,6 +59,33 @@ function Dashboard({ user, onLogout, onUpdateUser }) {
       const data = await res.json();
       if (res.ok) setSurveys(data);
     } catch (e) { console.error(e); } finally { setLoading(false); }
+  };
+
+  const fetchCreatedSurveys = async () => {
+    setCreatedSurveysLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/surveys?createdOnly=true`, { headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      if (res.ok) setCreatedSurveys(data);
+    } catch (e) { console.error(e); } finally { setCreatedSurveysLoading(false); }
+  };
+
+  const deleteSurvey = async (id) => {
+    if (!confirm('Xóa vĩnh viễn khảo sát này?')) return;
+    try {
+      const res = await fetch(`${API_URL}/surveys/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) {
+        alert('Đã xóa!');
+        fetchCreatedSurveys();
+        fetchSurveys();
+      } else {
+        const d = await res.json();
+        alert(d.message || 'Lỗi khi xóa khảo sát');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Đã xảy ra lỗi kết nối.');
+    }
   };
 
   const fetchNotifications = async () => {
@@ -140,7 +197,7 @@ function Dashboard({ user, onLogout, onUpdateUser }) {
                     <School size={15} style={{ color: '#6E9AE0' }} />
                     <div>
                       <p className="text-xs uppercase font-bold" style={{ color: '#A0AEC0' }}>Trường học</p>
-                      <p className="font-semibold" style={{ color: '#2d4771' }}>{SCHOOLS[user.school]?.label || user.school}</p>
+                      <p className="font-semibold" style={{ color: '#2d4771' }}>{user.school}</p>
                     </div>
                   </div>
                 )}
@@ -172,8 +229,16 @@ function Dashboard({ user, onLogout, onUpdateUser }) {
           <div className="rounded-2xl p-3 space-y-1 border" style={{ background: '#fff', borderColor: '#D2DBEA' }}>
             {[
               { key: 'surveys', icon: ClipboardList, label: 'Khảo sát của tôi' },
+              {
+                key: 'created-surveys',
+                icon: FileText,
+                label: 'Khảo sát đã tạo',
+                visible: ['Admin', 'Manager', 'Lecturer', 'Employer'].includes(user.role)
+              },
               { key: 'profile', icon: User, label: 'Thông tin cá nhân' },
-            ].map(({ key, icon: Icon, label }) => (
+            ]
+            .filter(item => item.visible !== false)
+            .map(({ key, icon: Icon, label }) => (
               <button
                 key={key}
                 onClick={() => setActiveTab(key)}
@@ -246,6 +311,89 @@ function Dashboard({ user, onLogout, onUpdateUser }) {
                 </div>
               )}
             </div>
+          ) : activeTab === 'created-surveys' ? (
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-xl font-extrabold" style={{ color: '#2d4771' }}>Danh sách Khảo sát đã tạo</h2>
+                  <p className="text-sm mt-0.5" style={{ color: '#6E9AE0' }}>Quản lý các cuộc khảo sát do bạn tạo ra</p>
+                </div>
+                <button
+                  onClick={() => navigate('/survey/create')}
+                  className="px-5 py-2.5 text-white font-bold rounded-2xl shadow-md transition-all text-sm flex items-center gap-2"
+                  style={{ background: 'linear-gradient(135deg, #6E9AE0, #487bc9)' }}
+                >
+                  <Plus size={17} /> Tạo Khảo Sát Mới
+                </button>
+              </div>
+
+              {createdSurveysLoading ? (
+                <div className="h-56 flex items-center justify-center">
+                  <div className="w-10 h-10 border-2 border-t-transparent rounded-full animate-spin animate-spin-slow" style={{ borderColor: '#6E9AE0', borderTopColor: 'transparent' }} />
+                </div>
+              ) : createdSurveys.length === 0 ? (
+                <div className="p-12 rounded-3xl text-center border-2 border-dashed" style={{ borderColor: '#D2DBEA' }}>
+                  <HelpCircle size={40} className="mx-auto mb-4" style={{ color: '#D2DBEA' }} />
+                  <h3 className="font-bold text-lg mb-1" style={{ color: '#2d4771' }}>Chưa có cuộc khảo sát nào</h3>
+                  <p className="text-sm" style={{ color: '#6E9AE0' }}>Nhấp vào nút "Tạo Khảo Sát Mới" để tạo cuộc khảo sát đầu tiên của bạn.</p>
+                </div>
+              ) : (
+                <div className="rounded-2xl border overflow-hidden shadow-sm" style={{ borderColor: '#D2DBEA', background: '#fff' }}>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                      <thead>
+                        <tr style={{ background: '#EEF4FD', borderBottom: '2px solid #D2DBEA' }}>
+                          {['Tên khảo sát', 'Đối tượng', 'Trạng thái', 'Câu hỏi', 'Hạn chót', 'Hành động'].map(h => (
+                            <th key={h} className="py-3.5 px-5 text-xs font-extrabold uppercase tracking-wide" style={{ color: '#6E9AE0' }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {createdSurveys.map((s, i) => (
+                          <tr key={s.id} style={{ borderBottom: '1px solid #D2DBEA', background: i % 2 === 0 ? '#fff' : '#FAFBFE' }}>
+                            <td className="py-4 px-5 max-w-xs">
+                              <p className="font-extrabold text-sm leading-tight" style={{ color: '#2d4771' }}>{s.title}</p>
+                              <p className="text-xs mt-0.5 line-clamp-1" style={{ color: '#6E9AE0' }}>{s.description || '—'}</p>
+                            </td>
+                            <td className="py-4 px-5">
+                              <span className="px-2 py-1 rounded-xl text-xs font-bold" style={{ background: '#EEF4FD', color: '#6E9AE0' }}>
+                                {TARGET_LABELS[s.targetAudience] || s.targetAudience}
+                              </span>
+                            </td>
+                            <td className="py-4 px-5">
+                              <span className="px-2 py-1 rounded-xl text-xs font-bold" style={{
+                                background: s.status === 'Active' ? '#F0FDF4' : s.status === 'Closed' ? '#FFF5F5' : '#FFFBEB',
+                                color: s.status === 'Active' ? '#16a34a' : s.status === 'Closed' ? '#dc2626' : '#D97706',
+                              }}>
+                                {s.status === 'Active' ? 'Đang chạy' : s.status === 'Closed' ? 'Đã đóng' : 'Bản nháp'}
+                              </span>
+                            </td>
+                            <td className="py-4 px-5 text-xs font-bold" style={{ color: '#A0AEC0' }}>{s.questionCount}</td>
+                            <td className="py-4 px-5 text-xs" style={{ color: '#487bc9' }}>{s.endDate ? new Date(s.endDate).toLocaleDateString('vi-VN') : '—'}</td>
+                            <td className="py-4 px-5">
+                              <div className="flex gap-2">
+                                <button onClick={() => navigate(`/survey/${s.id}/stats`)} title="Xem thống kê" className="p-2 rounded-xl transition-all" style={{ background: '#EEF4FD', color: '#6E9AE0' }}>
+                                  <Eye size={15} />
+                                </button>
+                                <a href={`${API_URL}/reports/${s.id}/excel`} target="_blank" rel="noreferrer" title="Xuất Excel" className="p-2 rounded-xl transition-all flex items-center" style={{ background: '#F0FDF4', color: '#16a34a' }}>
+                                  <FileSpreadsheet size={15} />
+                                </a>
+                                <button onClick={() => navigate(`/survey/edit/${s.id}`)} title="Chỉnh sửa" className="p-2 rounded-xl transition-all" style={{ background: '#FFFBEB', color: '#D97706' }}>
+                                  <Edit size={15} />
+                                </button>
+                                <button onClick={() => deleteSurvey(s.id)} title="Xóa" className="p-2 rounded-xl transition-all" style={{ background: '#FFF5F5', color: '#dc2626' }}>
+                                  <Trash2 size={15} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
           ) : (
             <ProfileEditForm user={user} API_URL={API_URL} token={token} onUpdateUser={onUpdateUser} />
           )}
@@ -282,6 +430,23 @@ function ProfileEditForm({ user, API_URL, token, onUpdateUser }) {
     e.preventDefault();
     setError(''); setSuccess('');
     if (!form.fullName.trim()) { setError('Họ tên không được để trống.'); return; }
+    
+    // Code validation
+    if (form.code.trim()) {
+      const isStudent = user.role === 'Student';
+      if (isStudent) {
+        if (!/^\d{8,12}$/.test(form.code.trim())) {
+          setError('Mã số sinh viên (MSSV) phải gồm từ 8 đến 12 chữ số.');
+          return;
+        }
+      } else {
+        if (!/^[a-zA-Z0-9]+$/.test(form.code.trim())) {
+          setError('Mã nhận diện chỉ được phép chứa chữ cái và số (không có ký tự đặc biệt hay khoảng trắng).');
+          return;
+        }
+      }
+    }
+
     if (form.newPassword) {
       if (!form.currentPassword) { setError('Vui lòng nhập mật khẩu hiện tại để đổi mật khẩu mới.'); return; }
       if (form.newPassword.length < 8) { setError('Mật khẩu mới phải từ 8 ký tự trở lên.'); return; }
@@ -384,8 +549,8 @@ function ProfileEditForm({ user, API_URL, token, onUpdateUser }) {
               style={inputStyle}
             >
               <option value="">Chọn trường...</option>
-              {Object.entries(SCHOOLS).map(([k, v]) => (
-                <option key={k} value={k}>{v.label}</option>
+              {SCHOOLS.map(s => (
+                <option key={s} value={s}>{s}</option>
               ))}
             </select>
           </div>
@@ -399,22 +564,25 @@ function ProfileEditForm({ user, API_URL, token, onUpdateUser }) {
               style={inputStyle}
             >
               <option value="">Chọn khoa...</option>
-              {(SCHOOLS[form.school]?.departments || []).map(d => (
+              {(DEPARTMENTS[form.school] || []).map(d => (
                 <option key={d} value={d}>{d}</option>
               ))}
             </select>
           </div>
           <div>
             <label className="block text-sm font-semibold mb-1 ml-1" style={{ color: '#2d4771' }}>Lớp học</label>
-            <input
-              type="text"
-              placeholder="VD: 21IT1"
-              disabled={!form.department || user.role !== 'Student'}
+            <select
               value={form.class}
+              disabled={!form.department || user.role !== 'Student'}
               onChange={e => setForm(f => ({ ...f, class: e.target.value }))}
-              className="w-full px-4 py-2.5 rounded-2xl border text-sm font-medium outline-none disabled:opacity-50"
+              className="w-full px-4 py-2.5 rounded-2xl border text-sm font-bold outline-none disabled:opacity-50"
               style={inputStyle}
-            />
+            >
+              <option value="">Chọn lớp...</option>
+              {(CLASSES[form.department] || []).map(c => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
           </div>
         </div>
 

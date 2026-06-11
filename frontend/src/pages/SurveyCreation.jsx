@@ -4,9 +4,30 @@ import { ArrowLeft, Save, Plus, Trash2, CheckCircle2, AlertCircle, ChevronRight 
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-const SCHOOLS = {
-  'DAU': { label: 'Kiến trúc Đà Nẵng (DAU)', departments: ['Kiến trúc', 'Quy hoạch đô thị', 'Nội thất', 'Mỹ thuật công nghiệp', 'Xây dựng'] },
-  'VKU': { label: 'Việt Hàn (VKU)',           departments: ['Công nghệ thông tin', 'Kỹ thuật máy tính', 'Điện tử viễn thông', 'Thương mại điện tử', 'Quản trị kinh doanh'] },
+const SCHOOLS = ["Kiến trúc Đà Nẵng (DAU)", "Việt Hàn (VKU)"];
+
+const DEPARTMENTS = {
+  "Kiến trúc Đà Nẵng (DAU)": [
+    "Công nghệ thông tin",
+    "Kiến trúc",
+    "Xây dựng",
+    "Kinh tế"
+  ],
+  "Việt Hàn (VKU)": [
+    "Khoa học Máy tính",
+    "Kỹ thuật Máy tính",
+    "Kinh tế số & Thương mại điện tử"
+  ]
+};
+
+const CLASSES = {
+  "Công nghệ thông tin": ["22CT1", "22CT2", "22CT3", "22CT4"],
+  "Kiến trúc": ["22KT1", "22KT2"],
+  "Xây dựng": ["22XD1"],
+  "Kinh tế": ["22KTQD1"],
+  "Khoa học Máy tính": ["22IT1", "22IT2"],
+  "Kỹ thuật Máy tính": ["22CE1"],
+  "Kinh tế số & Thương mại điện tử": ["22EC1"]
 };
 
 const inputBase = {
@@ -25,6 +46,7 @@ function SurveyCreation({ isEdit = false }) {
     description: '',
     targetAudience: 'Student',
     status: 'Draft',
+    startDate: new Date().toISOString().split('T')[0],
     endDate: '',
     school: '',
     department: '',
@@ -48,6 +70,7 @@ function SurveyCreation({ isEdit = false }) {
         description: data.description || '',
         targetAudience: data.targetAudience,
         status: data.status,
+        startDate: data.startDate ? new Date(data.startDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
         endDate: data.endDate ? new Date(data.endDate).toISOString().split('T')[0] : '',
         school: data.school || '',
         department: data.department || '',
@@ -79,6 +102,15 @@ function SurveyCreation({ isEdit = false }) {
       if (!q.text.trim()) { setError(`Nội dung câu hỏi ${i + 1} không được để trống.`); return; }
       if (['single_choice', 'multiple_choice'].includes(q.type) && q.options.length < 2) { setError(`Câu ${i + 1} phải có ít nhất 2 lựa chọn.`); return; }
     }
+    const today = new Date().toISOString().split('T')[0];
+    if (!isEdit && form.startDate < today) {
+      setError('Ngày bắt đầu không được ở quá khứ.');
+      return;
+    }
+    if (form.endDate && form.endDate < form.startDate) {
+      setError('Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu.');
+      return;
+    }
     setLoading(true);
     try {
       const method = isEdit ? 'PUT' : 'POST';
@@ -88,7 +120,7 @@ function SurveyCreation({ isEdit = false }) {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           ...form,
-          startDate: new Date(),
+          startDate: form.startDate ? new Date(form.startDate) : new Date(),
           endDate: form.endDate ? new Date(form.endDate) : null,
           questions,
           school: form.school || null,
@@ -104,7 +136,8 @@ function SurveyCreation({ isEdit = false }) {
   };
 
   const selectStyle = { ...inputBase, appearance: 'none' };
-  const depts = form.school ? (SCHOOLS[form.school]?.departments || []) : [];
+  const depts = form.school ? (DEPARTMENTS[form.school] || []) : [];
+  const classes = form.department ? (CLASSES[form.department] || []) : [];
 
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#F9FAFD' }}>
@@ -155,7 +188,7 @@ function SurveyCreation({ isEdit = false }) {
                 rows={3} className="w-full px-4 py-2.5 rounded-2xl border text-sm font-medium outline-none" style={inputBase}
                 onFocus={e => e.target.style.borderColor = '#6E9AE0'} onBlur={e => e.target.style.borderColor = '#D2DBEA'} />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
               {[
                 { label: 'Đối tượng mục tiêu', key: 'targetAudience', options: [['Student','Sinh viên'],['Lecturer','Giảng viên'],['Alumnus','Cựu sinh viên'],['Employer','Nhà tuyển dụng'],['All','Tất cả']] },
                 { label: 'Trạng thái', key: 'status', options: [['Draft','Bản nháp'],['Active','Kích hoạt'],['Closed','Đã đóng']] },
@@ -169,8 +202,13 @@ function SurveyCreation({ isEdit = false }) {
                 </div>
               ))}
               <div>
+                <label className="block text-sm font-semibold mb-1 ml-1" style={{ color: '#2d4771' }}>Ngày bắt đầu</label>
+                <input type="date" value={form.startDate} min={!isEdit ? new Date().toISOString().split('T')[0] : undefined} onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))}
+                  className="w-full px-4 py-2 rounded-2xl border text-sm font-medium outline-none" style={inputBase} />
+              </div>
+              <div>
                 <label className="block text-sm font-semibold mb-1 ml-1" style={{ color: '#2d4771' }}>Ngày hết hạn</label>
-                <input type="date" value={form.endDate} onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))}
+                <input type="date" value={form.endDate} min={form.startDate || new Date().toISOString().split('T')[0]} onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))}
                   className="w-full px-4 py-2 rounded-2xl border text-sm font-medium outline-none" style={inputBase} />
               </div>
             </div>
@@ -188,8 +226,8 @@ function SurveyCreation({ isEdit = false }) {
                     style={selectStyle}
                   >
                     <option value="">Tất cả các trường (Đà Nẵng)</option>
-                    {Object.entries(SCHOOLS).map(([k, v]) => (
-                      <option key={k} value={k}>{v.label}</option>
+                    {SCHOOLS.map(sc => (
+                      <option key={sc} value={sc}>{sc}</option>
                     ))}
                   </select>
                 </div>
@@ -212,17 +250,18 @@ function SurveyCreation({ isEdit = false }) {
 
                 <div>
                   <label className="block text-sm font-semibold mb-1 ml-1" style={{ color: '#2d4771' }}>Lớp mục tiêu</label>
-                  <input
-                    type="text"
-                    placeholder="VD: 21IT1 (Chỉ cho Sinh viên)"
+                  <select
                     disabled={!form.department || form.targetAudience !== 'Student'}
                     value={form.class}
                     onChange={e => setForm(f => ({ ...f, class: e.target.value }))}
-                    className="w-full px-4 py-2.5 rounded-2xl border text-sm font-medium outline-none disabled:opacity-50"
-                    style={inputBase}
-                    onFocus={e => e.target.style.borderColor = '#6E9AE0'}
-                    onBlur={e => e.target.style.borderColor = '#D2DBEA'}
-                  />
+                    className="w-full px-4 py-2.5 rounded-2xl border text-sm font-bold outline-none disabled:opacity-50"
+                    style={selectStyle}
+                  >
+                    <option value="">Tất cả các lớp</option>
+                    {classes.map(cl => (
+                      <option key={cl} value={cl}>{cl}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
             </div>
