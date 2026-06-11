@@ -193,6 +193,46 @@ const Notification = sequelize.define('Notification', {
   }
 });
 
+// 9. School Model
+const School = sequelize.define('School', {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
+  },
+  name: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    unique: true
+  }
+}, { timestamps: false });
+
+// 10. Department Model
+const Department = sequelize.define('Department', {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
+  },
+  name: {
+    type: DataTypes.STRING,
+    allowNull: false
+  }
+}, { timestamps: false });
+
+// 11. Classroom Model
+const Classroom = sequelize.define('Classroom', {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
+  },
+  name: {
+    type: DataTypes.STRING,
+    allowNull: false
+  }
+}, { timestamps: false });
+
 // --- Associations ---
 
 // User <-> Role
@@ -231,6 +271,14 @@ Answer.belongsTo(Question, { foreignKey: 'questionId', as: 'question' });
 User.hasMany(Notification, { foreignKey: 'userId', onDelete: 'CASCADE' });
 Notification.belongsTo(User, { foreignKey: 'userId' });
 
+// School <-> Department
+School.hasMany(Department, { foreignKey: 'schoolId', onDelete: 'CASCADE', as: 'departments' });
+Department.belongsTo(School, { foreignKey: 'schoolId', as: 'school' });
+
+// Department <-> Classroom
+Department.hasMany(Classroom, { foreignKey: 'departmentId', onDelete: 'CASCADE', as: 'classrooms' });
+Classroom.belongsTo(Department, { foreignKey: 'departmentId', as: 'department' });
+
 module.exports = {
   sequelize,
   Role,
@@ -240,5 +288,8 @@ module.exports = {
   QuestionOption,
   Response,
   Answer,
-  Notification
+  Notification,
+  School,
+  Department,
+  Classroom
 };

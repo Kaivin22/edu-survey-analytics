@@ -8,7 +8,10 @@ const {
   QuestionOption,
   Response,
   Answer,
-  Notification
+  Notification,
+  School,
+  Department,
+  Classroom
 } = require('../models');
 
 async function seed() {
@@ -28,6 +31,45 @@ async function seed() {
       { id: 6, name: 'Employer' }
     ]);
     console.log('Roles seeded.');
+
+    // 1.1. Seed Schools, Departments, and Classrooms
+    console.log('Seeding Schools, Departments, and Classrooms...');
+    const schoolDAU = await School.create({ name: 'Kiến trúc Đà Nẵng (DAU)' });
+    const schoolVKU = await School.create({ name: 'Việt Hàn (VKU)' });
+
+    const dauIT = await Department.create({ name: 'Công nghệ thông tin', schoolId: schoolDAU.id });
+    const dauArch = await Department.create({ name: 'Kiến trúc', schoolId: schoolDAU.id });
+    const dauBuild = await Department.create({ name: 'Xây dựng', schoolId: schoolDAU.id });
+    const dauEcon = await Department.create({ name: 'Kinh tế', schoolId: schoolDAU.id });
+
+    const vkuCS = await Department.create({ name: 'Khoa học Máy tính', schoolId: schoolVKU.id });
+    const vkuCE = await Department.create({ name: 'Kỹ thuật Máy tính', schoolId: schoolVKU.id });
+    const vkuBiz = await Department.create({ name: 'Kinh tế số & Thương mại điện tử', schoolId: schoolVKU.id });
+
+    await Classroom.bulkCreate([
+      { name: '22CT1', departmentId: dauIT.id },
+      { name: '22CT2', departmentId: dauIT.id },
+      { name: '22CT3', departmentId: dauIT.id },
+      { name: '22CT4', departmentId: dauIT.id }
+    ]);
+    
+    await Classroom.bulkCreate([
+      { name: '22KT1', departmentId: dauArch.id },
+      { name: '22KT2', departmentId: dauArch.id }
+    ]);
+
+    await Classroom.create({ name: '22XD1', departmentId: dauBuild.id });
+    await Classroom.create({ name: '22KTQD1', departmentId: dauEcon.id });
+
+    await Classroom.bulkCreate([
+      { name: '22IT1', departmentId: vkuCS.id },
+      { name: '22IT2', departmentId: vkuCS.id }
+    ]);
+
+    await Classroom.create({ name: '22CE1', departmentId: vkuCE.id });
+    await Classroom.create({ name: '22EC1', departmentId: vkuBiz.id });
+
+    console.log('Schools, Departments, Classrooms seeded.');
 
     if (process.env.NODE_ENV === 'production') {
       console.log('Production mode detected. Skipping mock users, surveys and responses seeding.');
