@@ -478,6 +478,20 @@ export default function Login({ onLogin, initialTab = 'login' }) {
       return;
     }
 
+    // Code validation
+    const isStudent = regForm.roleId === '3';
+    if (isStudent) {
+      if (!/^\d{8,12}$/.test(regForm.code.trim())) {
+        setError('Mã số sinh viên (MSSV) phải gồm từ 8 đến 12 chữ số.');
+        return;
+      }
+    } else {
+      if (!/^[a-zA-Z0-9]+$/.test(regForm.code.trim())) {
+        setError('Mã nhận diện chỉ được phép chứa chữ cái và số (không có ký tự đặc biệt hay khoảng trắng).');
+        return;
+      }
+    }
+
     setLoading(true);
     try {
       const payload = {
@@ -543,6 +557,21 @@ export default function Login({ onLogin, initialTab = 'login' }) {
       setError('Vui lòng điền đầy đủ tất cả thông tin bắt buộc.');
       return;
     }
+
+    // Code validation
+    const isStudent = regForm.roleId === '3';
+    if (isStudent) {
+      if (!/^\d{8,12}$/.test(regForm.code.trim())) {
+        setError('Mã số sinh viên (MSSV) phải gồm từ 8 đến 12 chữ số.');
+        return;
+      }
+    } else {
+      if (!/^[a-zA-Z0-9]+$/.test(regForm.code.trim())) {
+        setError('Mã nhận diện chỉ được phép chứa chữ cái và số (không có ký tự đặc biệt hay khoảng trắng).');
+        return;
+      }
+    }
+
     if (regForm.password.length < 8) {
       setError('Mật khẩu phải từ 8 ký tự trở lên.');
       return;

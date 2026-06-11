@@ -1,7 +1,24 @@
 const express = require('express');
 const router = express.Router();
+const bcrypt = require('bcryptjs');
 const { User, Role, Notification } = require('../models');
 const { authenticateToken, authorizeRoles } = require('../middleware/auth');
+
+// Helper to validate code (identification code)
+const validateCode = (code, roleIdOrName) => {
+  if (!code) return null;
+  const isStudent = roleIdOrName == 3 || roleIdOrName === 'Student';
+  if (isStudent) {
+    if (!/^\d{8,12}$/.test(code)) {
+      return 'Mã số sinh viên (MSSV) phải gồm từ 8 đến 12 chữ số.';
+    }
+  } else {
+    if (!/^[a-zA-Z0-9]+$/.test(code)) {
+      return 'Mã nhận diện chỉ được phép chứa chữ cái và số (không có ký tự đặc biệt, dấu cách hay số âm).';
+    }
+  }
+  return null;
+};
 
 // 1. Get all users (Admin only)
 router.get('/', authenticateToken, authorizeRoles('Admin'), async (req, res) => {
@@ -17,7 +34,95 @@ router.get('/', authenticateToken, authorizeRoles('Admin'), async (req, res) => 
   }
 });
 
-// 2. Change User Role (Admin only)
+// 2. Create User (Admin only)
+router.post('/', authenticateToken, authorizeRoles('Admin'), async (req, res) => {
+  try {
+    const { email, password, fullName, code, roleId, school, department, class: classVal } = req.body;
+
+    if (!email || !password || !fullName || !roleId) {
+      return res.status(400).json({ message: 'Vui lòng cung cấp đầy đủ thông tin bắt buộc.' });
+    }
+
+    const codeError = validateCode(code, roleId);
+    if (codeError) {
+      return res.status(400).json({ message: codeError });
+    }
+
+    const existingUser = await User.findOne({ where: { email } });
+    if (existingUser) {
+      return res.status(400).json({ message: 'Email này đã được sử dụng.' });
+    }
+
+    const role = await Role.findByPk(roleId);
+    if (!role) {
+      return res.status(400).json({ message: 'Vai trò không hợp lệ.' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser = await User.create({
+      email,
+      password: hashedPassword,
+      fullName,
+      code: code || null,
+      roleId,
+      school: school || null,
+      department: department || null,
+      class: classVal || null
+    });
+
+    res.status(201).json({ message: 'Tạo tài khoản thành công!', user: newUser });
+  } catch (error) {
+    res.status(500).json({ message: 'Lỗi tạo tài khoản.', error: error.message });
+  }
+});
+
+// 2.1 Edit User details (Admin only)
+router.put('/:id', authenticateToken, authorizeRoles('Admin'), async (req, res) => {
+  try {
+    const { email, password, fullName, code, roleId, school, department, class: classVal } = req.body;
+    const user = await User.findByPk(req.params.id);
+
+    if (!user) {
+      return res.status(404).json({ message: 'Không tìm thấy tài khoản.' });
+    }
+
+    const targetRoleId = roleId || user.roleId;
+    const codeError = validateCode(code, targetRoleId);
+    if (codeError) {
+      return res.status(400).json({ message: codeError });
+    }
+
+    if (email && email !== user.email) {
+      const existingUser = await User.findOne({ where: { email } });
+      if (existingUser) {
+        return res.status(400).json({ message: 'Email này đã được sử dụng.' });
+      }
+      user.email = email;
+    }
+
+    if (fullName) user.fullName = fullName;
+    if (code !== undefined) user.code = code || null;
+    if (roleId) {
+      const role = await Role.findByPk(roleId);
+      if (!role) return res.status(400).json({ message: 'Vai trò không hợp lệ.' });
+      user.roleId = roleId;
+    }
+    user.school = school || null;
+    user.department = department || null;
+    user.class = classVal || null;
+
+    if (password) {
+      user.password = await bcrypt.hash(password, 10);
+    }
+
+    await user.save();
+    res.json({ message: 'Cập nhật thông tin tài khoản thành công!', user });
+  } catch (error) {
+    res.status(500).json({ message: 'Lỗi cập nhật tài khoản.', error: error.message });
+  }
+});
+
+// 2.2 Change User Role (Admin only)
 router.put('/:id/role', authenticateToken, authorizeRoles('Admin'), async (req, res) => {
   try {
     const { roleId } = req.body;

@@ -8,6 +8,22 @@ require('dotenv').config();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'edu_survey_stakeholder_secret_key_2026';
 
+// Helper to validate code (identification code)
+const validateCode = (code, roleIdOrName) => {
+  if (!code) return null;
+  const isStudent = roleIdOrName == 3 || roleIdOrName === 'Student';
+  if (isStudent) {
+    if (!/^\d{8,12}$/.test(code)) {
+      return 'Mã số sinh viên (MSSV) phải gồm từ 8 đến 12 chữ số.';
+    }
+  } else {
+    if (!/^[a-zA-Z0-9]+$/.test(code)) {
+      return 'Mã nhận diện chỉ được phép chứa chữ cái và số (không có ký tự đặc biệt, dấu cách hay số âm).';
+    }
+  }
+  return null;
+};
+
 // 1. Get all roles (for registration page)
 router.get('/roles', async (req, res) => {
   try {
@@ -25,6 +41,11 @@ router.post('/register', async (req, res) => {
 
     if (!email || !password || !fullName || !roleId) {
       return res.status(400).json({ message: 'Vui lòng cung cấp đầy đủ thông tin bắt buộc.' });
+    }
+
+    const codeError = validateCode(code, roleId);
+    if (codeError) {
+      return res.status(400).json({ message: codeError });
     }
 
     if (parseInt(roleId) === 1 || parseInt(roleId) === 2) {
@@ -149,6 +170,11 @@ router.put('/profile', authenticateToken, async (req, res) => {
     const user = await User.findByPk(req.user.id);
     if (!user) {
       return res.status(404).json({ message: 'Người dùng không tồn tại.' });
+    }
+
+    const codeError = validateCode(code, user.roleId);
+    if (codeError) {
+      return res.status(400).json({ message: codeError });
     }
 
     if (newPassword) {
@@ -420,6 +446,11 @@ router.post('/google-register', async (req, res) => {
     const { email, name, roleId, school, department, class: classVal, code } = req.body;
     if (!email || !name || !roleId) {
       return res.status(400).json({ message: 'Thông tin đăng ký Google thiếu email, họ tên hoặc vai trò.' });
+    }
+
+    const codeError = validateCode(code, roleId);
+    if (codeError) {
+      return res.status(400).json({ message: codeError });
     }
 
     if (parseInt(roleId) === 1 || parseInt(roleId) === 2) {

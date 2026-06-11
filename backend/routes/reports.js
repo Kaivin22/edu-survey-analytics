@@ -80,11 +80,16 @@ function getAnswerText(ans, q) {
 // ─────────────────────────────────────────────────────────
 // Route 1: Export Excel
 // ─────────────────────────────────────────────────────────
-router.get('/:surveyId/excel', authenticateToken, authorizeRoles(['Admin', 'Manager']), async (req, res) => {
+router.get('/:surveyId/excel', authenticateToken, authorizeRoles(['Admin', 'Manager', 'Lecturer', 'Employer']), async (req, res) => {
   try {
     const { school, department, class: classVal } = req.query;
     const { survey, responses } = await getSurveyData(req.params.surveyId, { school, department, class: classVal });
     if (!survey) return res.status(404).json({ message: 'Không tìm thấy cuộc khảo sát này.' });
+
+    // Check ownership for Lecturer and Employer
+    if (['Lecturer', 'Employer'].includes(req.user.role) && survey.createdBy !== req.user.id) {
+      return res.status(403).json({ message: 'Bạn không có quyền tải báo cáo khảo sát này.' });
+    }
 
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'Hệ thống Khảo sát Ý kiến Giáo dục';
@@ -161,11 +166,16 @@ router.get('/:surveyId/excel', authenticateToken, authorizeRoles(['Admin', 'Mana
 // ─────────────────────────────────────────────────────────
 // Route 2: Export Word (.docx)
 // ─────────────────────────────────────────────────────────
-router.get('/:surveyId/word', authenticateToken, authorizeRoles(['Admin', 'Manager']), async (req, res) => {
+router.get('/:surveyId/word', authenticateToken, authorizeRoles(['Admin', 'Manager', 'Lecturer', 'Employer']), async (req, res) => {
   try {
     const { school, department, class: classVal } = req.query;
     const { survey, responses } = await getSurveyData(req.params.surveyId, { school, department, class: classVal });
     if (!survey) return res.status(404).json({ message: 'Không tìm thấy cuộc khảo sát này.' });
+
+    // Check ownership for Lecturer and Employer
+    if (['Lecturer', 'Employer'].includes(req.user.role) && survey.createdBy !== req.user.id) {
+      return res.status(403).json({ message: 'Bạn không có quyền tải báo cáo khảo sát này.' });
+    }
 
     const questionsSorted = [...survey.Questions].sort((a, b) => a.order - b.order);
 
@@ -296,11 +306,16 @@ router.get('/:surveyId/word', authenticateToken, authorizeRoles(['Admin', 'Manag
 // ─────────────────────────────────────────────────────────
 // Route 3: Export PDF
 // ─────────────────────────────────────────────────────────
-router.get('/:surveyId/pdf', authenticateToken, authorizeRoles(['Admin', 'Manager']), async (req, res) => {
+router.get('/:surveyId/pdf', authenticateToken, authorizeRoles(['Admin', 'Manager', 'Lecturer', 'Employer']), async (req, res) => {
   try {
     const { school, department, class: classVal } = req.query;
     const { survey, responses } = await getSurveyData(req.params.surveyId, { school, department, class: classVal });
     if (!survey) return res.status(404).json({ message: 'Không tìm thấy cuộc khảo sát này.' });
+
+    // Check ownership for Lecturer and Employer
+    if (['Lecturer', 'Employer'].includes(req.user.role) && survey.createdBy !== req.user.id) {
+      return res.status(403).json({ message: 'Bạn không có quyền tải báo cáo khảo sát này.' });
+    }
 
     const questionsSorted = [...survey.Questions].sort((a, b) => a.order - b.order);
 
