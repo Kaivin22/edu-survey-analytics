@@ -1,37 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { LogOut, ClipboardList, Users, BarChart3, Plus, Trash2, Edit, FileSpreadsheet, Eye, CheckCircle, HelpCircle, User, Lock } from 'lucide-react';
+import { LogOut, ClipboardList, Users, BarChart3, Plus, Trash2, Edit, FileSpreadsheet, Eye, CheckCircle, HelpCircle, User, Lock, School } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const TARGET_LABELS = { Student: 'Sinh viên', Lecturer: 'Giảng viên', Alumnus: 'Cựu sinh viên', Employer: 'Nhà tuyển dụng', All: 'Tất cả' };
 const ROLE_LABELS = { Admin: 'Quản trị viên', Manager: 'Cán bộ quản lý', Student: 'Sinh viên', Lecturer: 'Giảng viên', Alumnus: 'Cựu sinh viên', Employer: 'Nhà tuyển dụng' };
 
-const SCHOOLS = ["Kiến trúc Đà Nẵng (DAU)", "Việt Hàn (VKU)"];
-
-const DEPARTMENTS = {
-  "Kiến trúc Đà Nẵng (DAU)": [
-    "Công nghệ thông tin",
-    "Kiến trúc",
-    "Xây dựng",
-    "Kinh tế"
-  ],
-  "Việt Hàn (VKU)": [
-    "Khoa học Máy tính",
-    "Kỹ thuật Máy tính",
-    "Kinh tế số & Thương mại điện tử"
-  ]
-};
-
-const CLASSES = {
-  "Công nghệ thông tin": ["22CT1", "22CT2", "22CT3", "22CT4"],
-  "Kiến trúc": ["22KT1", "22KT2"],
-  "Xây dựng": ["22XD1"],
-  "Kinh tế": ["22KTQD1"],
-  "Khoa học Máy tính": ["22IT1", "22IT2"],
-  "Kỹ thuật Máy tính": ["22CE1"],
-  "Kinh tế số & Thương mại điện tử": ["22EC1"]
-};
+const SCHOOLS = [];
+const DEPARTMENTS = {};
+const CLASSES = {};
 
 function AdminDashboard({ user, onLogout, onUpdateUser }) {
   const [surveys, setSurveys] = useState([]);
@@ -60,6 +38,47 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
   const [modalSuccess, setModalSuccess] = useState('');
   const [modalLoading, setModalLoading] = useState(false);
 
+  // Dynamic categories state for user forms/filters
+  const [dynamicSchools, setDynamicSchools] = useState([]);
+  const [dynamicDepartments, setDynamicDepartments] = useState({});
+  const [dynamicClasses, setDynamicClasses] = useState({});
+  const [categoriesTree, setCategoriesTree] = useState([]);
+
+  // Selected entities for the category management columns
+  const [selectedSchoolId, setSelectedSchoolId] = useState(null);
+  const [selectedDeptId, setSelectedDeptId] = useState(null);
+
+  // CRUD operation states for category modal/inputs
+  const [categoryModal, setCategoryModal] = useState({ show: false, type: '', mode: 'create', parentId: null, targetId: null, name: '' });
+  const [categoryError, setCategoryError] = useState('');
+  const [categoryLoading, setCategoryLoading] = useState(false);
+
+  const fetchCategoriesTree = async () => {
+    try {
+      const res = await fetch(`${API_URL}/categories`);
+      if (!res.ok) throw new Error('Failed to fetch categories');
+      const data = await res.json();
+      setCategoriesTree(data);
+      
+      const schoolsList = data.map(s => s.name);
+      const deptsMap = {};
+      const classesMap = {};
+      
+      data.forEach(s => {
+        deptsMap[s.name] = s.departments.map(d => d.name);
+        s.departments.forEach(d => {
+          classesMap[d.name] = d.classrooms.map(c => c.name);
+        });
+      });
+      
+      setDynamicSchools(schoolsList);
+      setDynamicDepartments(deptsMap);
+      setDynamicClasses(classesMap);
+    } catch (err) {
+      console.error('Error fetching categories in AdminDashboard:', err);
+    }
+  };
+
   const filteredAccounts = accounts.filter(acc => {
     if (userFilters.role) {
       const userRoleName = acc.role?.name || acc.role || '';
@@ -73,7 +92,14 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
 
-  useEffect(() => { fetchSurveys(); if (user.role === 'Admin') { fetchAccounts(); fetchRoles(); } }, []);
+  useEffect(() => {
+    fetchSurveys();
+    fetchCategoriesTree();
+    if (user.role === 'Admin') {
+      fetchAccounts();
+      fetchRoles();
+    }
+  }, []);
 
   const fetchSurveys = async () => {
     try {
@@ -98,6 +124,67 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
       if (res.ok) setRoles(data);
     } catch (e) { console.error(e); }
   };
+
+  // ── Category CRUD handlers ──────────────────────────────────────────────────
+  const openCategoryModal = (type, mode, parentId = null, targetId = null, currentName = '') => {
+    setCategoryError('');
+    setCategoryModal({ show: true, type, mode, parentId, targetId, name: currentName });
+  };
+  const closeCategoryModal = () => setCategoryModal({ show: false, type: '', mode: 'create', parentId: null, targetId: null, name: '' });
+
+  const handleCategorySubmit = async (e) => {
+    e.preventDefault();
+    setCategoryError('');
+    const { type, mode, parentId, targetId, name } = categoryModal;
+    if (!name.trim()) { setCategoryError('Tên không được để trống.'); return; }
+    setCategoryLoading(true);
+    try {
+      let url, method, body;
+      if (type === 'school') {
+        url = mode === 'create' ? `${API_URL}/categories/schools` : `${API_URL}/categories/schools/${targetId}`;
+        method = mode === 'create' ? 'POST' : 'PUT';
+        body = { name: name.trim() };
+      } else if (type === 'department') {
+        url = mode === 'create' ? `${API_URL}/categories/schools/${parentId}/departments` : `${API_URL}/categories/departments/${targetId}`;
+        method = mode === 'create' ? 'POST' : 'PUT';
+        body = { name: name.trim() };
+      } else if (type === 'classroom') {
+        url = mode === 'create' ? `${API_URL}/categories/departments/${parentId}/classrooms` : `${API_URL}/categories/classrooms/${targetId}`;
+        method = mode === 'create' ? 'POST' : 'PUT';
+        body = { name: name.trim() };
+      }
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Đã xảy ra lỗi');
+      closeCategoryModal();
+      await fetchCategoriesTree();
+      // Reset selected items if parent was modified
+      if (type === 'school') { setSelectedSchoolId(null); setSelectedDeptId(null); }
+      if (type === 'department') setSelectedDeptId(null);
+    } catch (err) {
+      setCategoryError(err.message);
+    } finally {
+      setCategoryLoading(false);
+    }
+  };
+
+  const handleDeleteCategory = async (type, id) => {
+    const labels = { school: 'Trường này (và tất cả khoa, lớp bên trong)', department: 'Khoa này (và tất cả lớp bên trong)', classroom: 'Lớp này' };
+    if (!confirm(`Xóa vĩnh viễn: ${labels[type]}?`)) return;
+    const endpoints = { school: `${API_URL}/categories/schools/${id}`, department: `${API_URL}/categories/departments/${id}`, classroom: `${API_URL}/categories/classrooms/${id}` };
+    try {
+      const res = await fetch(endpoints[type], { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.message || 'Lỗi xóa'); }
+      await fetchCategoriesTree();
+      if (type === 'school') { setSelectedSchoolId(null); setSelectedDeptId(null); }
+      if (type === 'department') setSelectedDeptId(null);
+    } catch (err) { alert(err.message); }
+  };
+  // ─────────────────────────────────────────────────────────────────────────────
 
   const deleteSurvey = async (id) => {
     if (!confirm('Xóa vĩnh viễn khảo sát này?')) return;
@@ -281,6 +368,7 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
           {[
             { key: 'surveys', icon: ClipboardList, label: 'Quản lý phiếu khảo sát' },
             ...(user.role === 'Admin' ? [{ key: 'accounts', icon: Users, label: 'Quản lý phân quyền tài khoản' }] : []),
+            { key: 'categories', icon: School, label: 'Quản lý danh mục (Trường, Khoa, Lớp)' },
             { key: 'profile', icon: User, label: 'Thông tin cá nhân' },
           ].map(({ key, icon: Icon, label }) => (
             <button
@@ -429,14 +517,15 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
               {/* School filter */}
               <select value={userFilters.school} onChange={e => setUserFilters(f => ({ ...f, school: e.target.value, department: '', class: '' }))} style={{ padding: '7px 14px', borderRadius: 12, border: '1.5px solid #D2DBEA', background: '#fff', color: '#2d4771', fontSize: 13, fontWeight: 600, outline: 'none' }}>
                 <option value="">🏫 Tất cả trường</option>
-                <option value="Kiến trúc Đà Nẵng (DAU)">Kiến trúc Đà Nẵng (DAU)</option>
-                <option value="Việt Hàn (VKU)">Việt Hàn (VKU)</option>
+                {dynamicSchools.map(s => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
               </select>
 
               {/* Department filter */}
               <select value={userFilters.department} disabled={!userFilters.school} onChange={e => setUserFilters(f => ({ ...f, department: e.target.value, class: '' }))} style={{ padding: '7px 14px', borderRadius: 12, border: '1.5px solid #D2DBEA', background: '#fff', color: '#2d4771', fontSize: 13, fontWeight: 600, outline: 'none', opacity: userFilters.school ? 1 : 0.5 }}>
                 <option value="">📚 Tất cả khoa</option>
-                {(DEPARTMENTS[userFilters.school] || []).map(d => (
+                {(dynamicDepartments[userFilters.school] || []).map(d => (
                   <option key={d} value={d}>{d}</option>
                 ))}
               </select>
@@ -453,7 +542,7 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
                 }}
               >
                 <option value="">🎓 Tất cả lớp</option>
-                {(CLASSES[userFilters.department] || []).map(c => (
+                {(dynamicClasses[userFilters.department] || []).map(c => (
                   <option key={c} value={c}>{c}</option>
                 ))}
               </select>
@@ -534,6 +623,206 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
                 </table>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* ── Tab: Categories Management ── */}
+        {activeTab === 'categories' && (
+          <div className="space-y-5">
+            <div>
+              <h2 className="text-xl font-extrabold" style={{ color: '#2d4771' }}>Quản lý Danh mục</h2>
+              <p className="text-xs mt-0.5" style={{ color: '#6E9AE0' }}>Quản lý cây danh mục: Trường → Khoa / Phòng ban → Lớp hành chính. Nhấn vào một mục để xem cấp dưới.</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              {/* ── Column 1: Schools ── */}
+              <div className="rounded-2xl border shadow-sm overflow-hidden" style={{ borderColor: '#D2DBEA', background: '#fff' }}>
+                <div className="flex justify-between items-center px-4 py-3 border-b" style={{ background: '#EEF4FD', borderColor: '#D2DBEA' }}>
+                  <h3 className="font-extrabold text-sm" style={{ color: '#2d4771' }}>🏫 Trường Đại học</h3>
+                  <button
+                    onClick={() => openCategoryModal('school', 'create')}
+                    className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-white rounded-xl shadow-sm"
+                    style={{ background: 'linear-gradient(135deg, #6E9AE0, #487bc9)' }}
+                  >
+                    <Plus size={12} /> Thêm
+                  </button>
+                </div>
+                <div className="divide-y" style={{ borderColor: '#D2DBEA' }}>
+                  {categoriesTree.length === 0 ? (
+                    <p className="text-center py-8 text-xs text-slate-400">Chưa có trường nào. Hãy thêm trường đầu tiên.</p>
+                  ) : categoriesTree.map(school => (
+                    <div
+                      key={school.id}
+                      className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-blue-50 transition-all"
+                      style={{ background: selectedSchoolId === school.id ? '#EEF4FD' : undefined, borderLeft: selectedSchoolId === school.id ? '3px solid #6E9AE0' : '3px solid transparent' }}
+                      onClick={() => { setSelectedSchoolId(school.id); setSelectedDeptId(null); }}
+                    >
+                      <div>
+                        <p className="font-bold text-sm" style={{ color: '#2d4771' }}>{school.name}</p>
+                        <p className="text-xs" style={{ color: '#6E9AE0' }}>{school.departments?.length || 0} khoa</p>
+                      </div>
+                      <div className="flex gap-1">
+                        <button
+                          onClick={e => { e.stopPropagation(); openCategoryModal('school', 'edit', null, school.id, school.name); }}
+                          className="p-1.5 rounded-lg transition-all"
+                          style={{ background: '#FFFBEB', color: '#D97706' }}
+                          title="Sửa"
+                        ><Edit size={13} /></button>
+                        <button
+                          onClick={e => { e.stopPropagation(); handleDeleteCategory('school', school.id); }}
+                          className="p-1.5 rounded-lg transition-all"
+                          style={{ background: '#FFF5F5', color: '#dc2626' }}
+                          title="Xóa"
+                        ><Trash2 size={13} /></button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* ── Column 2: Departments ── */}
+              <div className="rounded-2xl border shadow-sm overflow-hidden" style={{ borderColor: '#D2DBEA', background: '#fff' }}>
+                <div className="flex justify-between items-center px-4 py-3 border-b" style={{ background: '#F0F9FF', borderColor: '#D2DBEA' }}>
+                  <h3 className="font-extrabold text-sm" style={{ color: '#2d4771' }}>📚 Khoa / Phòng ban</h3>
+                  {selectedSchoolId && (
+                    <button
+                      onClick={() => openCategoryModal('department', 'create', selectedSchoolId)}
+                      className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-white rounded-xl shadow-sm"
+                      style={{ background: 'linear-gradient(135deg, #6E9AE0, #487bc9)' }}
+                    >
+                      <Plus size={12} /> Thêm
+                    </button>
+                  )}
+                </div>
+                <div className="divide-y" style={{ borderColor: '#D2DBEA' }}>
+                  {!selectedSchoolId ? (
+                    <p className="text-center py-8 text-xs text-slate-400">← Chọn một trường để xem danh sách khoa</p>
+                  ) : (() => {
+                    const selectedSchool = categoriesTree.find(s => s.id === selectedSchoolId);
+                    const depts = selectedSchool?.departments || [];
+                    return depts.length === 0 ? (
+                      <p className="text-center py-8 text-xs text-slate-400">Chưa có khoa nào. Nhấn "Thêm" để tạo.</p>
+                    ) : depts.map(dept => (
+                      <div
+                        key={dept.id}
+                        className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-blue-50 transition-all"
+                        style={{ background: selectedDeptId === dept.id ? '#F0F9FF' : undefined, borderLeft: selectedDeptId === dept.id ? '3px solid #6E9AE0' : '3px solid transparent' }}
+                        onClick={() => setSelectedDeptId(dept.id)}
+                      >
+                        <div>
+                          <p className="font-bold text-sm" style={{ color: '#2d4771' }}>{dept.name}</p>
+                          <p className="text-xs" style={{ color: '#6E9AE0' }}>{dept.classrooms?.length || 0} lớp</p>
+                        </div>
+                        <div className="flex gap-1">
+                          <button
+                            onClick={e => { e.stopPropagation(); openCategoryModal('department', 'edit', selectedSchoolId, dept.id, dept.name); }}
+                            className="p-1.5 rounded-lg transition-all"
+                            style={{ background: '#FFFBEB', color: '#D97706' }}
+                            title="Sửa"
+                          ><Edit size={13} /></button>
+                          <button
+                            onClick={e => { e.stopPropagation(); handleDeleteCategory('department', dept.id); }}
+                            className="p-1.5 rounded-lg transition-all"
+                            style={{ background: '#FFF5F5', color: '#dc2626' }}
+                            title="Xóa"
+                          ><Trash2 size={13} /></button>
+                        </div>
+                      </div>
+                    ));
+                  })()}
+                </div>
+              </div>
+
+              {/* ── Column 3: Classrooms ── */}
+              <div className="rounded-2xl border shadow-sm overflow-hidden" style={{ borderColor: '#D2DBEA', background: '#fff' }}>
+                <div className="flex justify-between items-center px-4 py-3 border-b" style={{ background: '#F0FDF4', borderColor: '#D2DBEA' }}>
+                  <h3 className="font-extrabold text-sm" style={{ color: '#2d4771' }}>🎓 Lớp hành chính</h3>
+                  {selectedDeptId && (
+                    <button
+                      onClick={() => openCategoryModal('classroom', 'create', selectedDeptId)}
+                      className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-white rounded-xl shadow-sm"
+                      style={{ background: 'linear-gradient(135deg, #6E9AE0, #487bc9)' }}
+                    >
+                      <Plus size={12} /> Thêm
+                    </button>
+                  )}
+                </div>
+                <div className="divide-y" style={{ borderColor: '#D2DBEA' }}>
+                  {!selectedDeptId ? (
+                    <p className="text-center py-8 text-xs text-slate-400">← Chọn một khoa để xem danh sách lớp</p>
+                  ) : (() => {
+                    const selectedSchool = categoriesTree.find(s => s.id === selectedSchoolId);
+                    const selectedDept = selectedSchool?.departments?.find(d => d.id === selectedDeptId);
+                    const classrooms = selectedDept?.classrooms || [];
+                    return classrooms.length === 0 ? (
+                      <p className="text-center py-8 text-xs text-slate-400">Chưa có lớp nào. Nhấn "Thêm" để tạo.</p>
+                    ) : classrooms.map(cls => (
+                      <div
+                        key={cls.id}
+                        className="flex items-center justify-between px-4 py-3 hover:bg-green-50 transition-all"
+                      >
+                        <p className="font-bold text-sm" style={{ color: '#2d4771' }}>{cls.name}</p>
+                        <div className="flex gap-1">
+                          <button
+                            onClick={() => openCategoryModal('classroom', 'edit', selectedDeptId, cls.id, cls.name)}
+                            className="p-1.5 rounded-lg transition-all"
+                            style={{ background: '#FFFBEB', color: '#D97706' }}
+                            title="Sửa"
+                          ><Edit size={13} /></button>
+                          <button
+                            onClick={() => handleDeleteCategory('classroom', cls.id)}
+                            className="p-1.5 rounded-lg transition-all"
+                            style={{ background: '#FFF5F5', color: '#dc2626' }}
+                            title="Xóa"
+                          ><Trash2 size={13} /></button>
+                        </div>
+                      </div>
+                    ));
+                  })()}
+                </div>
+              </div>
+            </div>
+
+            {/* Category Modal */}
+            {categoryModal.show && (
+              <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div className="bg-white rounded-3xl border shadow-2xl max-w-sm w-full p-6 space-y-4" style={{ borderColor: '#D2DBEA' }}>
+                  <div className="flex justify-between items-center pb-3 border-b border-slate-100">
+                    <h3 className="font-extrabold text-lg" style={{ color: '#2d4771' }}>
+                      {categoryModal.mode === 'create' ? 'Thêm' : 'Sửa'} {categoryModal.type === 'school' ? 'Trường' : categoryModal.type === 'department' ? 'Khoa' : 'Lớp'}
+                    </h3>
+                    <button onClick={closeCategoryModal} className="text-slate-400 hover:text-slate-600 font-bold">✕</button>
+                  </div>
+                  {categoryError && <div className="p-3 rounded-2xl text-xs border" style={{ background: '#fff5f5', borderColor: '#fecaca', color: '#dc2626' }}>{categoryError}</div>}
+                  <form onSubmit={handleCategorySubmit} className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-semibold mb-1" style={{ color: '#2d4771' }}>Tên *</label>
+                      <input
+                        type="text"
+                        required
+                        autoFocus
+                        placeholder={categoryModal.type === 'school' ? 'Ví dụ: Kiến trúc Đà Nẵng (DAU)' : categoryModal.type === 'department' ? 'Ví dụ: Công nghệ thông tin' : 'Ví dụ: 22CT1'}
+                        value={categoryModal.name}
+                        onChange={e => setCategoryModal(prev => ({ ...prev, name: e.target.value }))}
+                        className="w-full px-4 py-2.5 rounded-2xl border text-sm font-medium outline-none"
+                        style={{ background: '#F9FAFD', borderColor: '#D2DBEA', color: '#2d4771' }}
+                      />
+                    </div>
+                    <div className="flex justify-end gap-2 pt-2">
+                      <button type="button" onClick={closeCategoryModal} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-sm">Hủy</button>
+                      <button
+                        type="submit"
+                        disabled={categoryLoading}
+                        className="px-4 py-2 text-white font-bold rounded-xl shadow-md text-sm disabled:opacity-50"
+                        style={{ background: 'linear-gradient(135deg, #6E9AE0, #487bc9)' }}
+                      >
+                        {categoryLoading ? 'Đang lưu...' : 'Lưu lại'}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -642,7 +931,7 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
                       onChange={e => setUserForm(f => ({ ...f, school: e.target.value, department: '', class: '' }))}
                     >
                       <option value="">Chọn...</option>
-                      {SCHOOLS.map(s => <option key={s} value={s}>{s}</option>)}
+                      {dynamicSchools.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
                   </div>
                   <div>
@@ -655,7 +944,7 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
                       onChange={e => setUserForm(f => ({ ...f, department: e.target.value, class: '' }))}
                     >
                       <option value="">Chọn...</option>
-                      {(DEPARTMENTS[userForm.school] || []).map(d => <option key={d} value={d}>{d}</option>)}
+                      {(dynamicDepartments[userForm.school] || []).map(d => <option key={d} value={d}>{d}</option>)}
                     </select>
                   </div>
                   <div>
@@ -668,7 +957,7 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
                       onChange={e => setUserForm(f => ({ ...f, class: e.target.value }))}
                     >
                       <option value="">Chọn...</option>
-                      {(CLASSES[userForm.department] || []).map(c => <option key={c} value={c}>{c}</option>)}
+                      {(dynamicClasses[userForm.department] || []).map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                   </div>
                 </div>

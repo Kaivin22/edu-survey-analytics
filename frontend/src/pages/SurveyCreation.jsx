@@ -4,31 +4,9 @@ import { ArrowLeft, Save, Plus, Trash2, CheckCircle2, AlertCircle, ChevronRight 
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-const SCHOOLS = ["Kiến trúc Đà Nẵng (DAU)", "Việt Hàn (VKU)"];
-
-const DEPARTMENTS = {
-  "Kiến trúc Đà Nẵng (DAU)": [
-    "Công nghệ thông tin",
-    "Kiến trúc",
-    "Xây dựng",
-    "Kinh tế"
-  ],
-  "Việt Hàn (VKU)": [
-    "Khoa học Máy tính",
-    "Kỹ thuật Máy tính",
-    "Kinh tế số & Thương mại điện tử"
-  ]
-};
-
-const CLASSES = {
-  "Công nghệ thông tin": ["22CT1", "22CT2", "22CT3", "22CT4"],
-  "Kiến trúc": ["22KT1", "22KT2"],
-  "Xây dựng": ["22XD1"],
-  "Kinh tế": ["22KTQD1"],
-  "Khoa học Máy tính": ["22IT1", "22IT2"],
-  "Kỹ thuật Máy tính": ["22CE1"],
-  "Kinh tế số & Thương mại điện tử": ["22EC1"]
-};
+const SCHOOLS = [];
+const DEPARTMENTS = {};
+const CLASSES = {};
 
 const inputBase = {
   background: '#F9FAFD',
@@ -56,6 +34,38 @@ function SurveyCreation({ isEdit = false }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  const [dynamicSchools, setDynamicSchools] = useState([]);
+  const [dynamicDepartments, setDynamicDepartments] = useState({});
+  const [dynamicClasses, setDynamicClasses] = useState({});
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await fetch(`${API_URL}/categories`);
+        if (!res.ok) throw new Error('Failed to fetch categories');
+        const data = await res.json();
+        
+        const schoolsList = data.map(s => s.name);
+        const deptsMap = {};
+        const classesMap = {};
+        
+        data.forEach(s => {
+          deptsMap[s.name] = s.departments.map(d => d.name);
+          s.departments.forEach(d => {
+            classesMap[d.name] = d.classrooms.map(c => c.name);
+          });
+        });
+        
+        setDynamicSchools(schoolsList);
+        setDynamicDepartments(deptsMap);
+        setDynamicClasses(classesMap);
+      } catch (err) {
+        console.error('Error fetching categories in SurveyCreation:', err);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   useEffect(() => { if (isEdit && id) loadSurvey(); }, [id, isEdit]);
 
@@ -136,8 +146,8 @@ function SurveyCreation({ isEdit = false }) {
   };
 
   const selectStyle = { ...inputBase, appearance: 'none' };
-  const depts = form.school ? (DEPARTMENTS[form.school] || []) : [];
-  const classes = form.department ? (CLASSES[form.department] || []) : [];
+  const depts = form.school ? (dynamicDepartments[form.school] || []) : [];
+  const classes = form.department ? (dynamicClasses[form.department] || []) : [];
 
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#F9FAFD' }}>
@@ -226,7 +236,7 @@ function SurveyCreation({ isEdit = false }) {
                     style={selectStyle}
                   >
                     <option value="">Tất cả các trường (Đà Nẵng)</option>
-                    {SCHOOLS.map(sc => (
+                    {dynamicSchools.map(sc => (
                       <option key={sc} value={sc}>{sc}</option>
                     ))}
                   </select>
