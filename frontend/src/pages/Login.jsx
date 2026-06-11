@@ -5,31 +5,9 @@ import { Mail, Lock, Eye, EyeOff, Loader2, AlertCircle, User, Award, Briefcase, 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 // School and Department Configurations
-const SCHOOLS = ["Kiến trúc Đà Nẵng (DAU)", "Việt Hàn (VKU)"];
-
-const DEPARTMENTS = {
-  "Kiến trúc Đà Nẵng (DAU)": [
-    "Công nghệ thông tin",
-    "Kiến trúc",
-    "Xây dựng",
-    "Kinh tế"
-  ],
-  "Việt Hàn (VKU)": [
-    "Khoa học Máy tính",
-    "Kỹ thuật Máy tính",
-    "Kinh tế số & Thương mại điện tử"
-  ]
-};
-
-const CLASSES = {
-  "Công nghệ thông tin": ["22CT1", "22CT2", "22CT3", "22CT4"],
-  "Kiến trúc": ["22KT1", "22KT2"],
-  "Xây dựng": ["22XD1"],
-  "Kinh tế": ["22KTQD1"],
-  "Khoa học Máy tính": ["22IT1", "22IT2"],
-  "Kỹ thuật Máy tính": ["22CE1"],
-  "Kinh tế số & Thương mại điện tử": ["22EC1"]
-};
+const SCHOOLS = [];
+const DEPARTMENTS = {};
+const CLASSES = {};
 
 const DEMO_ACCOUNTS = import.meta.env.PROD
   ? [
@@ -211,11 +189,15 @@ export default function Login({ onLogin, initialTab = 'login' }) {
     email: '',
     password: '',
     roleId: '3', // Default to Student
-    school: SCHOOLS[0],
-    department: DEPARTMENTS[SCHOOLS[0]][0],
-    class: CLASSES[DEPARTMENTS[SCHOOLS[0]][0]] ? CLASSES[DEPARTMENTS[SCHOOLS[0]][0]][0] : '',
+    school: '',
+    department: '',
+    class: '',
     code: ''
   });
+
+  const [dynamicSchools, setDynamicSchools] = useState([]);
+  const [dynamicDepartments, setDynamicDepartments] = useState({});
+  const [dynamicClasses, setDynamicClasses] = useState({});
 
   // Google OAuth states
   const [authGoogleLoading, setAuthGoogleLoading] = useState(false);
@@ -336,6 +318,47 @@ export default function Login({ onLogin, initialTab = 'login' }) {
     googleCallbackRef.current = handleGoogleSignInResponse;
   });
 
+  // Fetch dynamic categories from database
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await fetch(`${API_URL}/categories`);
+        if (!res.ok) throw new Error('Failed to fetch categories');
+        const data = await res.json();
+        
+        const schoolsList = data.map(s => s.name);
+        const deptsMap = {};
+        const classesMap = {};
+        
+        data.forEach(s => {
+          deptsMap[s.name] = s.departments.map(d => d.name);
+          s.departments.forEach(d => {
+            classesMap[d.name] = d.classrooms.map(c => c.name);
+          });
+        });
+        
+        setDynamicSchools(schoolsList);
+        setDynamicDepartments(deptsMap);
+        setDynamicClasses(classesMap);
+        
+        if (schoolsList.length > 0) {
+          const defaultSchool = schoolsList[0];
+          const defaultDept = deptsMap[defaultSchool] ? deptsMap[defaultSchool][0] : '';
+          const defaultClass = (classesMap[defaultDept] && classesMap[defaultDept].length > 0) ? classesMap[defaultDept][0] : '';
+          setRegForm(prev => ({
+            ...prev,
+            school: prev.school || defaultSchool,
+            department: prev.department || defaultDept,
+            class: prev.class || defaultClass
+          }));
+        }
+      } catch (err) {
+        console.error('Error fetching categories in Login:', err);
+      }
+    };
+    fetchCategories();
+  }, []);
+
   // Google Identity Services (GIS) integration
   useEffect(() => {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
@@ -435,9 +458,9 @@ export default function Login({ onLogin, initialTab = 'login' }) {
 
   // Dynamic values helper based on selected school/department/role
   const handleSchoolChange = (schoolName) => {
-    const depts = DEPARTMENTS[schoolName] || [];
+    const depts = dynamicDepartments[schoolName] || [];
     const defaultDept = depts[0] || '';
-    const classes = CLASSES[defaultDept] || [];
+    const classes = dynamicClasses[defaultDept] || [];
     const defaultClass = classes[0] || '';
     setRegForm(prev => ({
       ...prev,
@@ -448,7 +471,7 @@ export default function Login({ onLogin, initialTab = 'login' }) {
   };
 
   const handleDeptChange = (deptName) => {
-    const classes = CLASSES[deptName] || [];
+    const classes = dynamicClasses[deptName] || [];
     const defaultClass = classes[0] || '';
     setRegForm(prev => ({
       ...prev,
@@ -1001,7 +1024,7 @@ export default function Login({ onLogin, initialTab = 'login' }) {
                     onChange={e => handleSchoolChange(e.target.value)}
                     style={{ ...inputStyle, padding: '10px 12px' }}
                   >
-                    {SCHOOLS.map(sc => <option key={sc} value={sc}>{sc}</option>)}
+                    {dynamicSchools.map(sc => <option key={sc} value={sc}>{sc}</option>)}
                   </select>
                 </div>
                 <div>
@@ -1011,7 +1034,7 @@ export default function Login({ onLogin, initialTab = 'login' }) {
                     onChange={e => handleDeptChange(e.target.value)}
                     style={{ ...inputStyle, padding: '10px 12px' }}
                   >
-                    {(DEPARTMENTS[regForm.school] || []).map(dp => <option key={dp} value={dp}>{dp}</option>)}
+                    {(dynamicDepartments[regForm.school] || []).map(dp => <option key={dp} value={dp}>{dp}</option>)}
                   </select>
                 </div>
               </div>
@@ -1025,7 +1048,7 @@ export default function Login({ onLogin, initialTab = 'login' }) {
                     onChange={e => setRegForm(prev => ({ ...prev, class: e.target.value }))}
                     style={{ ...inputStyle, padding: '10px 12px' }}
                   >
-                    {(CLASSES[regForm.department] || []).map(cl => <option key={cl} value={cl}>{cl}</option>)}
+                    {(dynamicClasses[regForm.department] || []).map(cl => <option key={cl} value={cl}>{cl}</option>)}
                   </select>
                 </div>
               )}
@@ -1102,7 +1125,7 @@ export default function Login({ onLogin, initialTab = 'login' }) {
                     onChange={e => handleSchoolChange(e.target.value)}
                     style={{ ...inputStyle, padding: '10px 12px' }}
                   >
-                    {SCHOOLS.map(sc => <option key={sc} value={sc}>{sc}</option>)}
+                    {dynamicSchools.map(sc => <option key={sc} value={sc}>{sc}</option>)}
                   </select>
                 </div>
                 <div>
@@ -1112,7 +1135,7 @@ export default function Login({ onLogin, initialTab = 'login' }) {
                     onChange={e => handleDeptChange(e.target.value)}
                     style={{ ...inputStyle, padding: '10px 12px' }}
                   >
-                    {(DEPARTMENTS[regForm.school] || []).map(dp => <option key={dp} value={dp}>{dp}</option>)}
+                    {(dynamicDepartments[regForm.school] || []).map(dp => <option key={dp} value={dp}>{dp}</option>)}
                   </select>
                 </div>
               </div>
@@ -1126,7 +1149,7 @@ export default function Login({ onLogin, initialTab = 'login' }) {
                     onChange={e => setRegForm(prev => ({ ...prev, class: e.target.value }))}
                     style={{ ...inputStyle, padding: '10px 12px' }}
                   >
-                    {(CLASSES[regForm.department] || []).map(cl => <option key={cl} value={cl}>{cl}</option>)}
+                    {(dynamicClasses[regForm.department] || []).map(cl => <option key={cl} value={cl}>{cl}</option>)}
                   </select>
                 </div>
               )}

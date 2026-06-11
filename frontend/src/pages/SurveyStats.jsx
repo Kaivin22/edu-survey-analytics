@@ -5,31 +5,9 @@ import { ArrowLeft, FileSpreadsheet, FileText, File, ChevronDown, Users, BarChar
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 const TARGET_LABELS = { Student: 'Sinh viên', Lecturer: 'Giảng viên', Alumnus: 'Cựu sinh viên', Employer: 'Nhà tuyển dụng', All: 'Tất cả' };
 
-const SCHOOLS = ["Kiến trúc Đà Nẵng (DAU)", "Việt Hàn (VKU)"];
-
-const DEPARTMENTS = {
-  "Kiến trúc Đà Nẵng (DAU)": [
-    "Công nghệ thông tin",
-    "Kiến trúc",
-    "Xây dựng",
-    "Kinh tế"
-  ],
-  "Việt Hàn (VKU)": [
-    "Khoa học Máy tính",
-    "Kỹ thuật Máy tính",
-    "Kinh tế số & Thương mại điện tử"
-  ]
-};
-
-const CLASSES = {
-  "Công nghệ thông tin": ["22CT1", "22CT2", "22CT3", "22CT4"],
-  "Kiến trúc": ["22KT1", "22KT2"],
-  "Xây dựng": ["22XD1"],
-  "Kinh tế": ["22KTQD1"],
-  "Khoa học Máy tính": ["22IT1", "22IT2"],
-  "Kỹ thuật Máy tính": ["22CE1"],
-  "Kinh tế số & Thương mại điện tử": ["22EC1"]
-};
+const SCHOOLS = [];
+const DEPARTMENTS = {};
+const CLASSES = {};
 
 const EXPORT_OPTIONS = [
   { id: 'excel', label: 'Xuất Excel (.xlsx)', icon: FileSpreadsheet, color: '#16a34a', bg: '#f0fdf4', ext: 'excel' },
@@ -146,9 +124,9 @@ function ExportDropdown({ surveyId, token, filters }) {
 }
 
 // ── Filter Bar ─────────────────────────────────────────────────────────────
-function FilterBar({ filters, onChange, onClear }) {
-  const depts = filters.school ? (DEPARTMENTS[filters.school] || []) : [];
-  const classes = filters.department ? (CLASSES[filters.department] || []) : [];
+function FilterBar({ filters, onChange, onClear, dynamicSchools = [], dynamicDepartments = {}, dynamicClasses = {} }) {
+  const depts = filters.school ? (dynamicDepartments[filters.school] || []) : [];
+  const classes = filters.department ? (dynamicClasses[filters.department] || []) : [];
   const hasFilter = filters.school || filters.department || filters.class;
 
   const selStyle = {
@@ -171,7 +149,7 @@ function FilterBar({ filters, onChange, onClear }) {
       {/* School */}
       <select value={filters.school} onChange={e => onChange({ school: e.target.value, department: '', class: '' })} style={selStyle}>
         <option value="">🏫 Tất cả trường</option>
-        {SCHOOLS.map(sc => (
+        {dynamicSchools.map(sc => (
           <option key={sc} value={sc}>{sc}</option>
         ))}
       </select>
@@ -209,7 +187,7 @@ function FilterBar({ filters, onChange, onClear }) {
           fontSize: 11, fontWeight: 600, color: '#6E9AE0',
           background: '#EEF4FD', borderRadius: 8, padding: '4px 10px'
         }}>
-          {[filters.school && SCHOOLS[filters.school]?.label, filters.department, filters.class].filter(Boolean).join(' › ')}
+          {[filters.school, filters.department, filters.class].filter(Boolean).join(' › ')}
         </span>
       )}
     </div>
@@ -225,6 +203,38 @@ function SurveyStats({ user }) {
   const [error, setError] = useState('');
   const [filters, setFilters] = useState({ school: '', department: '', class: '' });
   const token = localStorage.getItem('token');
+
+  const [dynamicSchools, setDynamicSchools] = useState([]);
+  const [dynamicDepartments, setDynamicDepartments] = useState({});
+  const [dynamicClasses, setDynamicClasses] = useState({});
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await fetch(`${API_URL}/categories`);
+        if (!res.ok) throw new Error('Failed to fetch categories');
+        const data = await res.json();
+        
+        const schoolsList = data.map(s => s.name);
+        const deptsMap = {};
+        const classesMap = {};
+        
+        data.forEach(s => {
+          deptsMap[s.name] = s.departments.map(d => d.name);
+          s.departments.forEach(d => {
+            classesMap[d.name] = d.classrooms.map(c => c.name);
+          });
+        });
+        
+        setDynamicSchools(schoolsList);
+        setDynamicDepartments(deptsMap);
+        setDynamicClasses(classesMap);
+      } catch (err) {
+        console.error('Error fetching categories in SurveyStats:', err);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   useEffect(() => { fetchStats(); }, [id, filters]);
 
@@ -279,7 +289,14 @@ function SurveyStats({ user }) {
       <main className="flex-1 max-w-5xl w-full mx-auto p-6 md:p-10 space-y-8">
 
         {/* Filter Bar */}
-        <FilterBar filters={filters} onChange={handleFilterChange} onClear={handleFilterClear} />
+        <FilterBar 
+          filters={filters} 
+          onChange={handleFilterChange} 
+          onClear={handleFilterClear}
+          dynamicSchools={dynamicSchools}
+          dynamicDepartments={dynamicDepartments}
+          dynamicClasses={dynamicClasses}
+        />
 
         {loading ? (
           <div className="h-56 flex items-center justify-center">

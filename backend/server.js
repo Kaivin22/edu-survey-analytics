@@ -9,6 +9,7 @@ const authRouter = require('./routes/auth');
 const surveyRouter = require('./routes/surveys');
 const userRouter = require('./routes/users');
 const reportRouter = require('./routes/reports');
+const categoriesRouter = require('./routes/categories');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -33,6 +34,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/surveys', surveyRouter);
 app.use('/api/users', userRouter);
 app.use('/api/reports', reportRouter);
+app.use('/api/categories', categoriesRouter);
 
 // Global Error Handler
 app.use((err, req, res, next) => {
