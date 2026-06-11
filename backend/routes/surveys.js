@@ -19,9 +19,16 @@ router.get('/', authenticateToken, async (req, res) => {
   try {
     const userRole = req.user.role;
     const userId = req.user.id;
+    const { createdOnly } = req.query;
 
-    if (userRole === 'Admin' || userRole === 'Manager') {
+    if (createdOnly === 'true' || userRole === 'Admin' || userRole === 'Manager') {
+      const whereClause = {};
+      if (createdOnly === 'true') {
+        whereClause.createdBy = userId;
+      }
+
       const surveys = await Survey.findAll({
+        where: whereClause,
         include: [
           { model: User, as: 'creator', attributes: ['fullName', 'email'] },
           { model: Question, attributes: ['id'] }
@@ -128,8 +135,8 @@ router.get('/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// 3. Create Survey (Admin only)
-router.post('/', authenticateToken, authorizeRoles('Admin'), async (req, res) => {
+// 3. Create Survey (Admin, Manager, Lecturer, Employer)
+router.post('/', authenticateToken, authorizeRoles(['Admin', 'Manager', 'Lecturer', 'Employer']), async (req, res) => {
   const transaction = await sequelize.transaction();
   try {
     const { title, description, targetAudience, status, startDate, endDate, questions, school, department, class: classVal } = req.body;
@@ -182,8 +189,8 @@ router.post('/', authenticateToken, authorizeRoles('Admin'), async (req, res) =>
   }
 });
 
-// 4. Update Survey (Admin only)
-router.put('/:id', authenticateToken, authorizeRoles('Admin'), async (req, res) => {
+// 4. Update Survey (Admin, Manager, Lecturer, Employer)
+router.put('/:id', authenticateToken, authorizeRoles(['Admin', 'Manager', 'Lecturer', 'Employer']), async (req, res) => {
   const transaction = await sequelize.transaction();
   try {
     const { title, description, targetAudience, status, startDate, endDate, questions, school, department, class: classVal } = req.body;
@@ -192,6 +199,11 @@ router.put('/:id', authenticateToken, authorizeRoles('Admin'), async (req, res) 
     const survey = await Survey.findByPk(surveyId);
     if (!survey) {
       return res.status(404).json({ message: 'Không tìm thấy khảo sát để chỉnh sửa.' });
+    }
+
+    // Check ownership for non-admin/manager roles
+    if (['Lecturer', 'Employer'].includes(req.user.role) && survey.createdBy !== req.user.id) {
+      return res.status(403).json({ message: 'Bạn không có quyền chỉnh sửa khảo sát này.' });
     }
 
     // Update main fields
@@ -246,12 +258,17 @@ router.put('/:id', authenticateToken, authorizeRoles('Admin'), async (req, res) 
   }
 });
 
-// 5. Delete Survey (Admin only)
-router.delete('/:id', authenticateToken, authorizeRoles('Admin'), async (req, res) => {
+// 5. Delete Survey (Admin, Manager, Lecturer, Employer)
+router.delete('/:id', authenticateToken, authorizeRoles(['Admin', 'Manager', 'Lecturer', 'Employer']), async (req, res) => {
   try {
     const survey = await Survey.findByPk(req.params.id);
     if (!survey) {
       return res.status(404).json({ message: 'Không tìm thấy cuộc khảo sát cần xóa.' });
+    }
+
+    // Check ownership for non-admin/manager roles
+    if (['Lecturer', 'Employer'].includes(req.user.role) && survey.createdBy !== req.user.id) {
+      return res.status(403).json({ message: 'Bạn không có quyền xóa khảo sát này.' });
     }
 
     await survey.destroy(); // Cascades deletes to Questions, Options, Responses
@@ -322,8 +339,8 @@ router.post('/:id/submit', authenticateToken, async (req, res) => {
   }
 });
 
-// 7. Get Survey Statistical Data (Admin and Manager only)
-router.get('/:id/stats', authenticateToken, authorizeRoles(['Admin', 'Manager']), async (req, res) => {
+// 7. Get Survey Statistical Data (Admin, Manager, Lecturer, Employer)
+router.get('/:id/stats', authenticateToken, authorizeRoles(['Admin', 'Manager', 'Lecturer', 'Employer']), async (req, res) => {
   try {
     const surveyId = req.params.id;
     const { school, department, class: classVal } = req.query;
@@ -340,6 +357,11 @@ router.get('/:id/stats', authenticateToken, authorizeRoles(['Admin', 'Manager'])
 
     if (!survey) {
       return res.status(404).json({ message: 'Không tìm thấy cuộc khảo sát.' });
+    }
+
+    // Check ownership for non-admin/manager roles
+    if (['Lecturer', 'Employer'].includes(req.user.role) && survey.createdBy !== req.user.id) {
+      return res.status(403).json({ message: 'Bạn không có quyền xem thống kê khảo sát này.' });
     }
 
     // Filter responses based on school, department, class

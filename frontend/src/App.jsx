@@ -93,11 +93,11 @@ function App() {
           element={user ? <SurveyTaking user={user} onLogout={logout} /> : <Navigate to="/login" replace />}
         />
 
-        {/* ── Survey stats (Admin/Manager only) ── */}
+        {/* ── Survey stats (Admin/Manager/Lecturer/Employer) ── */}
         <Route
           path="/survey/:id/stats"
           element={
-            user && ['Admin', 'Manager'].includes(user.role) ? (
+            user && ['Admin', 'Manager', 'Lecturer', 'Employer'].includes(user.role) ? (
               <SurveyStats user={user} onLogout={logout} />
             ) : (
               <Navigate to="/login" replace />
@@ -105,11 +105,11 @@ function App() {
           }
         />
 
-        {/* ── Survey creation/editing (Admin only) ── */}
+        {/* ── Survey creation/editing (Admin/Manager/Lecturer/Employer) ── */}
         <Route
           path="/survey/create"
           element={
-            user && user.role === 'Admin' ? (
+            user && ['Admin', 'Manager', 'Lecturer', 'Employer'].includes(user.role) ? (
               <SurveyCreation user={user} onLogout={logout} />
             ) : (
               <Navigate to="/login" replace />
@@ -119,7 +119,7 @@ function App() {
         <Route
           path="/survey/edit/:id"
           element={
-            user && user.role === 'Admin' ? (
+            user && ['Admin', 'Manager', 'Lecturer', 'Employer'].includes(user.role) ? (
               <SurveyCreation user={user} onLogout={logout} isEdit={true} />
             ) : (
               <Navigate to="/login" replace />
