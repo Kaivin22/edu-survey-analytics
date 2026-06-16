@@ -448,12 +448,11 @@ export default function Login({ onLogin, initialTab = 'login' }) {
     setError('');
     setSuccess('');
   }, [initialTab]);
-
   const handleTabSwitch = (tab) => {
     setActiveTab(tab);
     setError('');
     setSuccess('');
-    window.history.replaceState(null, '', tab === 'login' ? '/login' : '/register');
+    window.history.replaceState(null, '', tab === 'login' ? '#/login' : '#/register');
   };
 
   // Dynamic values helper based on selected school/department/role

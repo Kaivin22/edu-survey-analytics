@@ -36,6 +36,20 @@ app.use('/api/users', userRouter);
 app.use('/api/reports', reportRouter);
 app.use('/api/categories', categoriesRouter);
 
+// Fallback to index.html for SPA routing (e.g. if BrowserRouter is used)
+app.get('*', (req, res, next) => {
+  // Do not intercept API requests
+  if (req.url.startsWith('/api')) {
+    return next();
+  }
+  const indexPath = path.join(__dirname, 'public', 'index.html');
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    next();
+  }
+});
+
 // Global Error Handler
 app.use((err, req, res, next) => {
   console.error(err.stack);
