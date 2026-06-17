@@ -56,6 +56,52 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: 'Đã xảy ra lỗi hệ thống cục bộ.', error: err.message });
 });
 
+// Manual migrations to ensure new columns exist in pre-existing tables
+async function runManualMigrations(sequelize) {
+  try {
+    const dialect = sequelize.getDialect();
+    console.log(`Running manual migrations for dialect: ${dialect}...`);
+    if (dialect === 'postgres') {
+      const queries = [
+        'ALTER TABLE "Users" ADD COLUMN IF NOT EXISTS "status" VARCHAR(255) DEFAULT \'Active\';',
+        'ALTER TABLE "Surveys" ADD COLUMN IF NOT EXISTS "startDate" TIMESTAMP WITH TIME ZONE;',
+        'ALTER TABLE "Surveys" ADD COLUMN IF NOT EXISTS "endDate" TIMESTAMP WITH TIME ZONE;',
+        'ALTER TABLE "Surveys" ADD COLUMN IF NOT EXISTS "school" VARCHAR(255);',
+        'ALTER TABLE "Surveys" ADD COLUMN IF NOT EXISTS "department" VARCHAR(255);',
+        'ALTER TABLE "Surveys" ADD COLUMN IF NOT EXISTS "class" VARCHAR(255);'
+      ];
+      for (const q of queries) {
+        try {
+          await sequelize.query(q);
+        } catch (err) {
+          console.warn(`PG Migration query failed: ${q}`, err.message);
+        }
+      }
+    } else if (dialect === 'sqlite') {
+      const migrations = [
+        { table: 'Users', column: 'status', type: 'VARCHAR(255) DEFAULT \'Active\'' },
+        { table: 'Surveys', column: 'startDate', type: 'DATETIME' },
+        { table: 'Surveys', column: 'endDate', type: 'DATETIME' },
+        { table: 'Surveys', column: 'school', type: 'VARCHAR(255)' },
+        { table: 'Surveys', column: 'department', type: 'VARCHAR(255)' },
+        { table: 'Surveys', column: 'class', type: 'VARCHAR(255)' }
+      ];
+      for (const m of migrations) {
+        try {
+          await sequelize.query(`ALTER TABLE ${m.table} ADD COLUMN ${m.column} ${m.type};`);
+          console.log(`SQLite added column ${m.column} to table ${m.table}`);
+        } catch (err) {
+          if (!err.message.includes('duplicate column name') && !err.message.includes('already exists')) {
+            console.warn(`SQLite Migration query failed for ${m.table}.${m.column}:`, err.message);
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error running manual migrations:', err);
+  }
+}
+
 // Sync Database and Start Server
 async function startServer() {
   try {
@@ -74,6 +120,8 @@ async function startServer() {
       const seed = require('./scripts/initDb');
       await seed();
     } else {
+      console.log('Running database migration checks...');
+      await runManualMigrations(sequelize);
       console.log('Syncing database schema...');
       await sequelize.sync({ alter: true });
       console.log('Database schema synchronized.');
