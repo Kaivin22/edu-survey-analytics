@@ -18,7 +18,12 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('surveys');
   const [stats, setStats] = useState({ total: 0, active: 0, users: 0 });
-  const [userFilters, setUserFilters] = useState({ role: '', school: '', department: '', class: '' });
+  const [userFilters, setUserFilters] = useState({ 
+    role: '', 
+    school: user.role === 'Manager' ? user.school : '', 
+    department: '', 
+    class: '' 
+  });
 
   // Modal User Form States
   const [showUserModal, setShowUserModal] = useState(false);
@@ -74,6 +79,14 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
       setDynamicSchools(schoolsList);
       setDynamicDepartments(deptsMap);
       setDynamicClasses(classesMap);
+
+      // Auto-select manager's school
+      if (user.role === 'Manager' && user.school) {
+        const matchingSchool = data.find(s => s.name === user.school);
+        if (matchingSchool) {
+          setSelectedSchoolId(matchingSchool.id);
+        }
+      }
     } catch (err) {
       console.error('Error fetching categories in AdminDashboard:', err);
     }
@@ -235,8 +248,8 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
       password: '',
       fullName: '',
       code: '',
-      roleId: roles.length > 0 ? roles[0].id : '',
-      school: '',
+      roleId: roles.length > 0 ? roles.filter(r => !(user.role === 'Manager' && (r.name === 'Admin' || r.name === 'Manager' || r.id === 1 || r.id === 2)))[0]?.id : '',
+      school: user.role === 'Manager' ? user.school : '',
       department: '',
       class: ''
     });
@@ -254,7 +267,7 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
       fullName: acc.fullName || '',
       code: acc.code || '',
       roleId: acc.roleId || '',
-      school: acc.school || '',
+      school: user.role === 'Manager' ? user.school : (acc.school || ''),
       department: acc.department || '',
       class: acc.class || ''
     });
@@ -408,7 +421,7 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
                 <h2 className="text-xl font-extrabold" style={{ color: '#2d4771' }}>Danh sách Cuộc Khảo Sát</h2>
                 <p className="text-xs mt-0.5" style={{ color: '#6E9AE0' }}>Nhấn biểu tượng mắt để xem thống kê phân tích và tải xuống báo cáo Excel</p>
               </div>
-              {user.role === 'Admin' && (
+              {['Admin', 'Manager'].includes(user.role) && (
                 <button
                   onClick={() => navigate('/survey/create')}
                   className="px-5 py-2.5 text-white font-bold rounded-2xl shadow-md transition-all text-sm flex items-center gap-2"
@@ -466,7 +479,7 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
                               <button onClick={() => navigate(`/survey/${s.id}/stats`)} title="Xem thống kê" className="p-2 rounded-xl transition-all" style={{ background: '#EEF4FD', color: '#6E9AE0' }}>
                                 <Eye size={15} />
                               </button>
-                              {user.role === 'Admin' && (
+                              {(user.role === 'Admin' || (user.role === 'Manager' && s.school === user.school)) && (
                                 <>
                                   <button onClick={() => navigate(`/survey/edit/${s.id}`)} title="Chỉnh sửa" className="p-2 rounded-xl transition-all" style={{ background: '#FFFBEB', color: '#D97706' }}>
                                     <Edit size={15} />
@@ -527,11 +540,19 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
               </select>
 
               {/* School filter */}
-              <select value={userFilters.school} onChange={e => setUserFilters(f => ({ ...f, school: e.target.value, department: '', class: '' }))} style={{ padding: '7px 14px', borderRadius: 12, border: '1.5px solid #D2DBEA', background: '#fff', color: '#2d4771', fontSize: 13, fontWeight: 600, outline: 'none' }}>
-                <option value="">🏫 Tất cả trường</option>
-                {dynamicSchools.map(s => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
+              <select 
+                value={userFilters.school} 
+                disabled={user.role === 'Manager'}
+                onChange={e => setUserFilters(f => ({ ...f, school: e.target.value, department: '', class: '' }))} 
+                style={{ padding: '7px 14px', borderRadius: 12, border: '1.5px solid #D2DBEA', background: '#fff', color: '#2d4771', fontSize: 13, fontWeight: 600, outline: 'none', opacity: user.role === 'Manager' ? 0.7 : 1 }}
+              >
+                {user.role !== 'Manager' && <option value="">🏫 Tất cả trường</option>}
+                {dynamicSchools
+                  .filter(s => !(user.role === 'Manager' && s !== user.school))
+                  .map(s => (
+                    <option key={s} value={s}>{s}</option>
+                  ))
+                }
               </select>
 
               {/* Department filter */}
@@ -560,8 +581,8 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
               </select>
 
               {/* Reset filter */}
-              {(userFilters.role || userFilters.school || userFilters.department || userFilters.class) && (
-                <button onClick={() => setUserFilters({ role: '', school: '', department: '', class: '' })} style={{ padding: '6px 12px', borderRadius: 10, border: '1.5px solid #fecaca', background: '#fff5f5', color: '#dc2626', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+              {(userFilters.role || (user.role !== 'Manager' && userFilters.school) || userFilters.department || userFilters.class) && (
+                <button onClick={() => setUserFilters({ role: '', school: user.role === 'Manager' ? user.school : '', department: '', class: '' })} style={{ padding: '6px 12px', borderRadius: 10, border: '1.5px solid #fecaca', background: '#fff5f5', color: '#dc2626', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
                   Xóa lọc
                 </button>
               )}
@@ -587,11 +608,14 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
                           <select
                             value={acc.roleId}
                             onChange={e => changeRole(acc.id, e.target.value)}
-                            disabled={acc.id === user.id}
+                            disabled={acc.id === user.id || (user.role === 'Manager' && (acc.role?.name === 'Admin' || acc.role?.name === 'Manager' || acc.roleId === 1 || acc.roleId === 2))}
                             className="rounded-xl px-2 py-1 text-xs font-bold outline-none border disabled:opacity-40"
                             style={{ background: '#EEF4FD', borderColor: '#D2DBEA', color: '#2d4771' }}
                           >
-                            {roles.map(r => <option key={r.id} value={r.id}>{ROLE_LABELS[r.name] || r.name}</option>)}
+                            {roles
+                              .filter(r => !(user.role === 'Manager' && (r.name === 'Admin' || r.name === 'Manager' || r.id === 1 || r.id === 2)))
+                              .map(r => <option key={r.id} value={r.id}>{ROLE_LABELS[r.name] || r.name}</option>)
+                            }
                           </select>
                         </td>
                         <td className="py-3.5 px-5 text-xs" style={{ color: '#2d4771' }}>
@@ -624,7 +648,8 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
                             )}
                             <button
                               onClick={() => openEditModal(acc)}
-                              className="p-2 rounded-xl transition-all"
+                              disabled={user.role === 'Manager' && (acc.role?.name === 'Admin' || acc.role?.name === 'Manager' || acc.roleId === 1 || acc.roleId === 2)}
+                              className="p-2 rounded-xl transition-all disabled:opacity-30"
                               style={{ background: '#FFFBEB', color: '#D97706' }}
                               title="Chỉnh sửa"
                             >
@@ -632,7 +657,7 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
                             </button>
                             <button
                               onClick={() => deleteUser(acc.id)}
-                              disabled={acc.id === user.id}
+                              disabled={acc.id === user.id || (user.role === 'Manager' && (acc.role?.name === 'Admin' || acc.role?.name === 'Manager' || acc.roleId === 1 || acc.roleId === 2))}
                               className="p-2 rounded-xl transition-all disabled:opacity-30"
                               style={{ background: '#FFF5F5', color: '#dc2626' }}
                               title="Xóa"
@@ -670,18 +695,22 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
               <div className="rounded-2xl border shadow-sm overflow-hidden" style={{ borderColor: '#D2DBEA', background: '#fff' }}>
                 <div className="flex justify-between items-center px-4 py-3 border-b" style={{ background: '#EEF4FD', borderColor: '#D2DBEA' }}>
                   <h3 className="font-extrabold text-sm" style={{ color: '#2d4771' }}>🏫 Trường Đại học</h3>
-                  <button
-                    onClick={() => openCategoryModal('school', 'create')}
-                    className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-white rounded-xl shadow-sm"
-                    style={{ background: 'linear-gradient(135deg, #6E9AE0, #487bc9)' }}
-                  >
-                    <Plus size={12} /> Thêm
-                  </button>
+                  {user.role !== 'Manager' && (
+                    <button
+                      onClick={() => openCategoryModal('school', 'create')}
+                      className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-white rounded-xl shadow-sm"
+                      style={{ background: 'linear-gradient(135deg, #6E9AE0, #487bc9)' }}
+                    >
+                      <Plus size={12} /> Thêm
+                    </button>
+                  )}
                 </div>
                 <div className="divide-y" style={{ borderColor: '#D2DBEA' }}>
                   {categoriesTree.length === 0 ? (
                     <p className="text-center py-8 text-xs text-slate-400">Chưa có trường nào. Hãy thêm trường đầu tiên.</p>
-                  ) : categoriesTree.map(school => (
+                  ) : categoriesTree
+                      .filter(school => !(user.role === 'Manager' && school.name !== user.school))
+                      .map(school => (
                     <div
                       key={school.id}
                       className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-blue-50 transition-all"
@@ -692,20 +721,22 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
                         <p className="font-bold text-sm" style={{ color: '#2d4771' }}>{school.name}</p>
                         <p className="text-xs" style={{ color: '#6E9AE0' }}>{school.departments?.length || 0} khoa</p>
                       </div>
-                      <div className="flex gap-1">
-                        <button
-                          onClick={e => { e.stopPropagation(); openCategoryModal('school', 'edit', null, school.id, school.name); }}
-                          className="p-1.5 rounded-lg transition-all"
-                          style={{ background: '#FFFBEB', color: '#D97706' }}
-                          title="Sửa"
-                        ><Edit size={13} /></button>
-                        <button
-                          onClick={e => { e.stopPropagation(); handleDeleteCategory('school', school.id); }}
-                          className="p-1.5 rounded-lg transition-all"
-                          style={{ background: '#FFF5F5', color: '#dc2626' }}
-                          title="Xóa"
-                        ><Trash2 size={13} /></button>
-                      </div>
+                      {user.role !== 'Manager' && (
+                        <div className="flex gap-1">
+                          <button
+                            onClick={e => { e.stopPropagation(); openCategoryModal('school', 'edit', null, school.id, school.name); }}
+                            className="p-1.5 rounded-lg transition-all"
+                            style={{ background: '#FFFBEB', color: '#D97706' }}
+                            title="Sửa"
+                          ><Edit size={13} /></button>
+                          <button
+                            onClick={e => { e.stopPropagation(); handleDeleteCategory('school', school.id); }}
+                            className="p-1.5 rounded-lg transition-all"
+                            style={{ background: '#FFF5F5', color: '#dc2626' }}
+                            title="Xóa"
+                          ><Trash2 size={13} /></button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -947,7 +978,10 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
                     }}
                   >
                     <option value="">Chọn vai trò...</option>
-                    {roles.map(r => <option key={r.id} value={r.id}>{ROLE_LABELS[r.name] || r.name}</option>)}
+                    {roles
+                      .filter(r => !(user.role === 'Manager' && (r.name === 'Admin' || r.name === 'Manager' || r.id === 1 || r.id === 2)))
+                      .map(r => <option key={r.id} value={r.id}>{ROLE_LABELS[r.name] || r.name}</option>)
+                    }
                   </select>
                 </div>
 
@@ -956,12 +990,13 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
                   <div>
                     <label className="block mb-1" style={{ color: '#2d4771' }}>Trường</label>
                     <select
-                      className="w-full px-2 py-2 rounded-xl border outline-none"
+                      className="w-full px-2 py-2 rounded-xl border outline-none disabled:opacity-75"
+                      disabled={user.role === 'Manager'}
                       style={{ background: '#F9FAFD', borderColor: '#D2DBEA', color: '#2d4771' }}
                       value={userForm.school}
                       onChange={e => setUserForm(f => ({ ...f, school: e.target.value, department: '', class: '' }))}
                     >
-                      <option value="">Chọn...</option>
+                      {user.role !== 'Manager' && <option value="">Chọn...</option>}
                       {dynamicSchools.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
                   </div>

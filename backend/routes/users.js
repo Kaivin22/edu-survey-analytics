@@ -30,7 +30,9 @@ router.get('/', authenticateToken, authorizeRoles(['Admin', 'Manager']), async (
       // Get the manager's school from the database
       const manager = await User.findByPk(req.user.id);
       if (manager && manager.school) {
+        const { Op } = require('sequelize');
         whereClause.school = manager.school;
+        whereClause.roleId = { [Op.ne]: 1 }; // Exclude Admins
       } else {
         return res.json([]); // Manager without school sees nothing
       }
@@ -66,6 +68,10 @@ router.post('/', authenticateToken, authorizeRoles(['Admin', 'Manager']), async 
       // Force the school to be manager's school
       if (school && school !== manager.school) {
         return res.status(403).json({ message: 'Bạn chỉ có thể tạo tài khoản trong trường của mình.' });
+      }
+      // Block Manager from creating Admin or Manager accounts
+      if (parseInt(roleId) === 1 || parseInt(roleId) === 2) {
+        return res.status(403).json({ message: 'Bạn không có quyền tạo tài khoản Quản trị viên hoặc Cán bộ quản lý.' });
       }
     }
 
@@ -127,6 +133,14 @@ router.put('/:id', authenticateToken, authorizeRoles(['Admin', 'Manager']), asyn
       if (!manager || user.school !== manager.school) {
         return res.status(403).json({ message: 'Bạn chỉ có thể chỉnh sửa tài khoản trong trường của mình.' });
       }
+      // Block Manager from editing Admin or Manager accounts
+      if (user.roleId === 1 || user.roleId === 2) {
+        return res.status(403).json({ message: 'Bạn không có quyền chỉnh sửa tài khoản Quản trị viên hoặc Cán bộ quản lý.' });
+      }
+      // Block Manager from upgrading a user to Admin or Manager
+      if (roleId && (parseInt(roleId) === 1 || parseInt(roleId) === 2)) {
+        return res.status(403).json({ message: 'Bạn không có quyền cấp vai trò Quản trị viên hoặc Cán bộ quản lý.' });
+      }
     }
 
     const targetRoleId = roleId || user.roleId;
@@ -181,6 +195,14 @@ router.put('/:id/role', authenticateToken, authorizeRoles(['Admin', 'Manager']),
       if (!manager || user.school !== manager.school) {
         return res.status(403).json({ message: 'Bạn chỉ có thể thay đổi vai trò của người dùng trong trường của mình.' });
       }
+      // Block Manager from changing role of Admin or Manager accounts
+      if (user.roleId === 1 || user.roleId === 2) {
+        return res.status(403).json({ message: 'Bạn không có quyền thay đổi vai trò của tài khoản Quản trị viên hoặc Cán bộ quản lý.' });
+      }
+      // Block Manager from upgrading a user to Admin or Manager
+      if (parseInt(roleId) === 1 || parseInt(roleId) === 2) {
+        return res.status(403).json({ message: 'Bạn không có quyền cấp vai trò Quản trị viên hoặc Cán bộ quản lý.' });
+      }
     }
 
     const role = await Role.findByPk(roleId);
@@ -215,6 +237,10 @@ router.put('/:id/approve', authenticateToken, authorizeRoles(['Admin', 'Manager'
       if (!manager || (user.school && user.school !== manager.school)) {
         return res.status(403).json({ message: 'Bạn chỉ có thể phê duyệt tài khoản trong trường của mình.' });
       }
+      // Block Manager from approving Admin or Manager accounts
+      if (user.roleId === 1 || user.roleId === 2) {
+        return res.status(403).json({ message: 'Bạn không có quyền phê duyệt tài khoản Quản trị viên hoặc Cán bộ quản lý.' });
+      }
     }
 
     user.status = 'Active';
@@ -243,6 +269,10 @@ router.delete('/:id', authenticateToken, authorizeRoles(['Admin', 'Manager']), a
       const manager = await User.findByPk(req.user.id);
       if (!manager || user.school !== manager.school) {
         return res.status(403).json({ message: 'Bạn chỉ có thể xóa tài khoản trong trường của mình.' });
+      }
+      // Block Manager from deleting Admin or Manager accounts
+      if (user.roleId === 1 || user.roleId === 2) {
+        return res.status(403).json({ message: 'Bạn không có quyền xóa tài khoản Quản trị viên hoặc Cán bộ quản lý.' });
       }
     }
 
