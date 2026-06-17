@@ -13,18 +13,30 @@ const {
 const { authenticateToken, authorizeRoles } = require('../middleware/auth');
 
 // 1. Get Surveys List
-// - Admins and Managers get all surveys.
+// - Admins get all surveys.
+// - Managers get surveys for their school.
 // - Other roles get active surveys corresponding to their targetAudience that they haven't submitted yet.
 router.get('/', authenticateToken, async (req, res) => {
   try {
     const userRole = req.user.role;
     const userId = req.user.id;
     const { createdOnly } = req.query;
+    const { Op } = require('sequelize');
 
     if (createdOnly === 'true' || userRole === 'Admin' || userRole === 'Manager') {
       const whereClause = {};
       if (createdOnly === 'true') {
         whereClause.createdBy = userId;
+      }
+
+      // Manager can only see surveys from their school
+      if (userRole === 'Manager') {
+        const manager = await User.findByPk(userId);
+        if (manager && manager.school) {
+          whereClause.school = {
+            [Op.or]: [null, manager.school]
+          };
+        }
       }
 
       const surveys = await Survey.findAll({
@@ -45,11 +57,16 @@ router.get('/', authenticateToken, async (req, res) => {
     } else {
       // Find the logged-in user to filter surveys targeted to their school/dept/class
       const user = await User.findByPk(userId);
-      const { Op } = require('sequelize');
 
+      const now = new Date();
       const surveyWhere = {
         status: 'Active',
-        targetAudience: [userRole, 'All']
+        targetAudience: [userRole, 'All'],
+        // Datetime scheduling: only show surveys within valid time range
+        [Op.or]: [
+          { startDate: null },
+          { startDate: { [Op.lte]: now } }
+        ]
       };
 
       if (user) {
@@ -75,7 +92,7 @@ router.get('/', authenticateToken, async (req, res) => {
         order: [['createdAt', 'DESC']]
       });
 
-      // Filter out surveys that the user already submitted
+      // Filter out expired surveys and already submitted ones
       const submittedResponses = await Response.findAll({
         where: { userId },
         attributes: ['surveyId']
@@ -83,7 +100,13 @@ router.get('/', authenticateToken, async (req, res) => {
       const submittedIds = submittedResponses.map(r => r.surveyId);
 
       const filtered = surveys
-        .filter(s => !submittedIds.includes(s.id))
+        .filter(s => {
+          // Filter out already submitted
+          if (submittedIds.includes(s.id)) return false;
+          // Filter out expired surveys
+          if (s.endDate && new Date(s.endDate) < now) return false;
+          return true;
+        })
         .map(s => ({
           ...s.toJSON(),
           questionCount: s.Questions ? s.Questions.length : 0
@@ -116,6 +139,18 @@ router.get('/:id', authenticateToken, async (req, res) => {
 
     if (!survey) {
       return res.status(404).json({ message: 'Không tìm thấy cuộc khảo sát này.' });
+    }
+
+    // Check datetime validity for non-admin/manager users wanting to take the survey
+    const userRole = req.user.role;
+    if (!['Admin', 'Manager'].includes(userRole)) {
+      const now = new Date();
+      if (survey.startDate && new Date(survey.startDate) > now) {
+        return res.status(400).json({ message: 'Khảo sát này chưa bắt đầu.' });
+      }
+      if (survey.endDate && new Date(survey.endDate) < now) {
+        return res.status(400).json({ message: 'Khảo sát này đã hết hạn.' });
+      }
     }
 
     // Sort questions and options by order
@@ -295,6 +330,15 @@ router.post('/:id/submit', authenticateToken, async (req, res) => {
       return res.status(400).json({ message: 'Cuộc khảo sát này hiện tại đã đóng hoặc chưa được kích hoạt.' });
     }
 
+    // Check datetime validity
+    const now = new Date();
+    if (survey.startDate && new Date(survey.startDate) > now) {
+      return res.status(400).json({ message: 'Khảo sát này chưa bắt đầu.' });
+    }
+    if (survey.endDate && new Date(survey.endDate) < now) {
+      return res.status(400).json({ message: 'Khảo sát này đã hết hạn. Bạn không thể gửi phản hồi nữa.' });
+    }
+
     // Check if user already submitted
     const existing = await Response.findOne({ where: { surveyId, userId } });
     if (existing) {
@@ -364,6 +408,14 @@ router.get('/:id/stats', authenticateToken, authorizeRoles(['Admin', 'Manager', 
       return res.status(403).json({ message: 'Bạn không có quyền xem thống kê khảo sát này.' });
     }
 
+    // Manager can only view stats for surveys in their school
+    if (req.user.role === 'Manager') {
+      const manager = await User.findByPk(req.user.id);
+      if (manager && manager.school && survey.school && survey.school !== manager.school) {
+        return res.status(403).json({ message: 'Bạn chỉ có thể xem thống kê khảo sát trong trường của mình.' });
+      }
+    }
+
     // Filter responses based on school, department, class
     const responseWhere = { surveyId };
     const userWhere = {};
@@ -383,6 +435,43 @@ router.get('/:id/stats', authenticateToken, authorizeRoles(['Admin', 'Manager', 
 
     const responseIds = matchingResponses.map(r => r.id);
     const totalResponses = responseIds.length;
+
+    // Calculate totalAssigned: count users matching survey criteria
+    const { Op } = require('sequelize');
+    const assignedWhere = {};
+    assignedWhere.status = 'Active';
+
+    // Match target audience
+    if (survey.targetAudience && survey.targetAudience !== 'All') {
+      // Find role by name
+      const targetRole = await Role.findOne({ where: { name: survey.targetAudience } });
+      if (targetRole) {
+        assignedWhere.roleId = targetRole.id;
+      }
+    } else {
+      // "All" means all non-admin, non-manager roles
+      const excludedRoles = await Role.findAll({ where: { name: ['Admin', 'Manager'] } });
+      const excludedIds = excludedRoles.map(r => r.id);
+      assignedWhere.roleId = { [Op.notIn]: excludedIds };
+    }
+
+    // Apply survey school/department/class filters
+    if (survey.school) {
+      assignedWhere.school = survey.school;
+    }
+    if (survey.department) {
+      assignedWhere.department = survey.department;
+    }
+    if (survey.class) {
+      assignedWhere.class = survey.class;
+    }
+
+    // Also apply query filters from frontend
+    if (school) assignedWhere.school = school;
+    if (department) assignedWhere.department = department;
+    if (classVal) assignedWhere.class = classVal;
+
+    const totalAssigned = await User.count({ where: assignedWhere });
 
     const stats = [];
 
@@ -463,6 +552,7 @@ router.get('/:id/stats', authenticateToken, authorizeRoles(['Admin', 'Manager', 
       department: survey.department,
       class: survey.class,
       totalResponses,
+      totalAssigned,
       stats
     });
   } catch (error) {

@@ -307,7 +307,7 @@ function SurveyStats({ user }) {
             {/* Summary cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
               {[
-                { icon: Users,    label: 'Số lượt phản hồi',   value: `${stats.totalResponses} lượt`, bg: '#EEF4FD', color: '#6E9AE0' },
+                { icon: Users,    label: 'Tỷ lệ phản hồi',   value: `${stats.totalResponses} / ${stats.totalAssigned} lượt (${stats.totalAssigned > 0 ? Math.round((stats.totalResponses / stats.totalAssigned) * 100) : 0}%)`, bg: '#EEF4FD', color: '#6E9AE0' },
                 { icon: Award,    label: 'Đối tượng khảo sát', value: TARGET_LABELS[stats.targetAudience] || stats.targetAudience, bg: '#FFFBEB', color: '#D97706' },
                 { icon: BarChart3, label: 'Số câu hỏi',        value: `${stats.stats.length} câu`,    bg: '#F0FDF4', color: '#16a34a' },
               ].map(({ icon: Icon, label, value, bg, color }) => (

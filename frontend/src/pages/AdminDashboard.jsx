@@ -95,7 +95,7 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
   useEffect(() => {
     fetchSurveys();
     fetchCategoriesTree();
-    if (user.role === 'Admin') {
+    if (['Admin', 'Manager'].includes(user.role)) {
       fetchAccounts();
       fetchRoles();
     }
@@ -205,6 +205,26 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
       body: JSON.stringify({ roleId: parseInt(roleId) }),
     });
     if (res.ok) { alert('Đã cập nhật vai trò!'); fetchAccounts(); } else { const d = await res.json(); alert(d.message); }
+  };
+
+  const approveUser = async (id) => {
+    if (!confirm('Phê duyệt kích hoạt tài khoản này?')) return;
+    try {
+      const res = await fetch(`${API_URL}/users/${id}/approve`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert(data.message || 'Đã phê duyệt tài khoản thành công!');
+        fetchAccounts();
+      } else {
+        alert(data.message || 'Lỗi phê duyệt tài khoản');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Đã xảy ra lỗi kết nối.');
+    }
   };
 
   const openCreateModal = () => {
@@ -332,20 +352,15 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
       <nav className="sticky top-0 z-30 shadow-sm" style={{ background: 'linear-gradient(135deg, #6E9AE0, #487bc9)' }}>
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <Link to="/dashboard" className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center text-white text-decoration-none"><BarChart3 size={20} /></Link>
+            <Link to="/" className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center text-white text-decoration-none"><BarChart3 size={20} /></Link>
             <div>
-              <span className="text-lg font-extrabold text-white tracking-tight">EDU SURVEY</span>
+              <Link to="/" style={{ textDecoration: 'none' }} className="text-lg font-extrabold text-white tracking-tight">Academic Synergy</Link>
               <span className="ml-2 text-xs bg-white/20 text-white px-2 py-0.5 rounded-lg font-bold">
                 {user.role === 'Admin' ? 'Admin Panel' : 'Manager Panel'}
               </span>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            {/* Quay lại Trang chủ */}
-            <Link to="/" className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold bg-white/15 hover:bg-white/25 text-white transition-all text-decoration-none">
-              🏠 Trang chủ
-            </Link>
-
             <span className="hidden md:block text-white text-sm font-semibold">Xin chào, {user.fullName}</span>
             <button onClick={onLogout} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-white/15 hover:bg-white/25 text-white transition-all">
               <LogOut size={15} /> Đăng xuất
@@ -360,14 +375,14 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
           <StatCard icon={ClipboardList} label="Tổng số khảo sát" value={stats.total} bg="#EEF4FD" iconColor="#6E9AE0" />
           <StatCard icon={CheckCircle} label="Khảo sát đang chạy" value={stats.active} bg="#F0FDF4" iconColor="#16a34a" />
-          <StatCard icon={Users} label="Tổng số tài khoản" value={user.role === 'Admin' ? stats.users : '—'} bg="#FFFBEB" iconColor="#D97706" />
+          <StatCard icon={Users} label="Tổng số tài khoản" value={['Admin', 'Manager'].includes(user.role) ? stats.users : '—'} bg="#FFFBEB" iconColor="#D97706" />
         </div>
 
         {/* Tabs */}
         <div className="flex gap-3" style={{ borderBottom: '2px solid #D2DBEA', paddingBottom: '1px' }}>
           {[
             { key: 'surveys', icon: ClipboardList, label: 'Quản lý phiếu khảo sát' },
-            ...(user.role === 'Admin' ? [{ key: 'accounts', icon: Users, label: 'Quản lý phân quyền tài khoản' }] : []),
+            ...(['Admin', 'Manager'].includes(user.role) ? [{ key: 'accounts', icon: Users, label: 'Quản lý phân quyền tài khoản' }] : []),
             { key: 'categories', icon: School, label: 'Quản lý danh mục (Trường, Khoa, Lớp)' },
             { key: 'profile', icon: User, label: 'Thông tin cá nhân' },
           ].map(({ key, icon: Icon, label }) => (
@@ -451,9 +466,6 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
                               <button onClick={() => navigate(`/survey/${s.id}/stats`)} title="Xem thống kê" className="p-2 rounded-xl transition-all" style={{ background: '#EEF4FD', color: '#6E9AE0' }}>
                                 <Eye size={15} />
                               </button>
-                              <a href={`${API_URL}/reports/${s.id}/excel`} target="_blank" rel="noreferrer" title="Xuất Excel" className="p-2 rounded-xl transition-all flex items-center" style={{ background: '#F0FDF4', color: '#16a34a' }}>
-                                <FileSpreadsheet size={15} />
-                              </a>
                               {user.role === 'Admin' && (
                                 <>
                                   <button onClick={() => navigate(`/survey/edit/${s.id}`)} title="Chỉnh sửa" className="p-2 rounded-xl transition-all" style={{ background: '#FFFBEB', color: '#D97706' }}>
@@ -476,8 +488,8 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
           </div>
         )}
 
-        {/* ── Tab: Accounts (Admin only) ── */}
-        {activeTab === 'accounts' && user.role === 'Admin' && (
+        {/* ── Tab: Accounts (Admin & Manager) ── */}
+        {activeTab === 'accounts' && ['Admin', 'Manager'].includes(user.role) && (
           <div className="space-y-5">
             <div className="flex justify-between items-center">
               <div>
@@ -560,7 +572,7 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
                 <table className="w-full text-left">
                   <thead>
                     <tr style={{ background: '#EEF4FD', borderBottom: '2px solid #D2DBEA' }}>
-                      {['Mã nhận diện', 'Họ và tên', 'Email', 'Vai trò', 'Trường / Khoa', 'Sửa', 'Xóa'].map(h => (
+                      {['Mã nhận diện', 'Họ và tên', 'Email', 'Vai trò', 'Trường / Khoa', 'Trạng thái', 'Hành động'].map(h => (
                         <th key={h} className="py-3.5 px-5 text-xs font-extrabold uppercase tracking-wide" style={{ color: '#6E9AE0' }}>{h}</th>
                       ))}
                     </tr>
@@ -592,23 +604,42 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
                           ) : '—'}
                         </td>
                         <td className="py-3.5 px-5">
-                          <button
-                            onClick={() => openEditModal(acc)}
-                            className="p-2 rounded-xl transition-all"
-                            style={{ background: '#FFFBEB', color: '#D97706' }}
-                          >
-                            <Edit size={15} />
-                          </button>
+                          <span className="px-2.5 py-1 rounded-xl text-xs font-bold" style={{
+                            background: acc.status === 'Active' ? '#F0FDF4' : '#FFFBEB',
+                            color: acc.status === 'Active' ? '#16a34a' : '#D97706',
+                          }}>
+                            {acc.status === 'Active' ? 'Hoạt động' : 'Chờ duyệt'}
+                          </span>
                         </td>
                         <td className="py-3.5 px-5">
-                          <button
-                            onClick={() => deleteUser(acc.id)}
-                            disabled={acc.id === user.id}
-                            className="p-2 rounded-xl transition-all disabled:opacity-30"
-                            style={{ background: '#FFF5F5', color: '#dc2626' }}
-                          >
-                            <Trash2 size={15} />
-                          </button>
+                          <div className="flex gap-2">
+                            {acc.status === 'Pending' && (
+                              <button
+                                onClick={() => approveUser(acc.id)}
+                                className="px-2.5 py-1.5 rounded-xl text-xs font-bold text-white transition-all flex items-center gap-1"
+                                style={{ background: '#16a34a', boxShadow: '0 2px 6px rgba(22,163,74,0.3)' }}
+                              >
+                                Phê duyệt
+                              </button>
+                            )}
+                            <button
+                              onClick={() => openEditModal(acc)}
+                              className="p-2 rounded-xl transition-all"
+                              style={{ background: '#FFFBEB', color: '#D97706' }}
+                              title="Chỉnh sửa"
+                            >
+                              <Edit size={15} />
+                            </button>
+                            <button
+                              onClick={() => deleteUser(acc.id)}
+                              disabled={acc.id === user.id}
+                              className="p-2 rounded-xl transition-all disabled:opacity-30"
+                              style={{ background: '#FFF5F5', color: '#dc2626' }}
+                              title="Xóa"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}

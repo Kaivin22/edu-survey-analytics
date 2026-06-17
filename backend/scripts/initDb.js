@@ -81,7 +81,7 @@ async function seed() {
     const hashedPassword = await bcrypt.hash('12345678', 10);
     const users = await User.bulkCreate([
       {
-        email: 'admin@edu.vn',
+        email: 'trankimlien31072004@gmail.com',
         password: hashedPassword,
         fullName: 'Nguyễn Quản Trị',
         code: 'ADMIN001',

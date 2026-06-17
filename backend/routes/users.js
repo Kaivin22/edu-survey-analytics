@@ -20,10 +20,24 @@ const validateCode = (code, roleIdOrName) => {
   return null;
 };
 
-// 1. Get all users (Admin only)
-router.get('/', authenticateToken, authorizeRoles('Admin'), async (req, res) => {
+// 1. Get all users (Admin sees all, Manager sees only their school)
+router.get('/', authenticateToken, authorizeRoles(['Admin', 'Manager']), async (req, res) => {
   try {
+    const whereClause = {};
+
+    // Manager can only see users from their own school
+    if (req.user.role === 'Manager') {
+      // Get the manager's school from the database
+      const manager = await User.findByPk(req.user.id);
+      if (manager && manager.school) {
+        whereClause.school = manager.school;
+      } else {
+        return res.json([]); // Manager without school sees nothing
+      }
+    }
+
     const users = await User.findAll({
+      where: whereClause,
       attributes: { exclude: ['password'] },
       include: [{ model: Role, as: 'role' }],
       order: [['createdAt', 'DESC']]
@@ -34,13 +48,25 @@ router.get('/', authenticateToken, authorizeRoles('Admin'), async (req, res) => 
   }
 });
 
-// 2. Create User (Admin only)
-router.post('/', authenticateToken, authorizeRoles('Admin'), async (req, res) => {
+// 2. Create User (Admin, Manager)
+router.post('/', authenticateToken, authorizeRoles(['Admin', 'Manager']), async (req, res) => {
   try {
     const { email, password, fullName, code, roleId, school, department, class: classVal } = req.body;
 
     if (!email || !password || !fullName || !roleId) {
       return res.status(400).json({ message: 'Vui lòng cung cấp đầy đủ thông tin bắt buộc.' });
+    }
+
+    // Manager can only create users within their school
+    if (req.user.role === 'Manager') {
+      const manager = await User.findByPk(req.user.id);
+      if (!manager || !manager.school) {
+        return res.status(403).json({ message: 'Không xác định được trường của bạn.' });
+      }
+      // Force the school to be manager's school
+      if (school && school !== manager.school) {
+        return res.status(403).json({ message: 'Bạn chỉ có thể tạo tài khoản trong trường của mình.' });
+      }
     }
 
     const codeError = validateCode(code, roleId);
@@ -59,15 +85,24 @@ router.post('/', authenticateToken, authorizeRoles('Admin'), async (req, res) =>
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+
+    // For Manager-created users, force school to manager's school
+    let finalSchool = school || null;
+    if (req.user.role === 'Manager') {
+      const manager = await User.findByPk(req.user.id);
+      finalSchool = manager.school;
+    }
+
     const newUser = await User.create({
       email,
       password: hashedPassword,
       fullName,
       code: code || null,
       roleId,
-      school: school || null,
+      school: finalSchool,
       department: department || null,
-      class: classVal || null
+      class: classVal || null,
+      status: 'Active'
     });
 
     res.status(201).json({ message: 'Tạo tài khoản thành công!', user: newUser });
@@ -76,14 +111,22 @@ router.post('/', authenticateToken, authorizeRoles('Admin'), async (req, res) =>
   }
 });
 
-// 2.1 Edit User details (Admin only)
-router.put('/:id', authenticateToken, authorizeRoles('Admin'), async (req, res) => {
+// 2.1 Edit User details (Admin, Manager)
+router.put('/:id', authenticateToken, authorizeRoles(['Admin', 'Manager']), async (req, res) => {
   try {
     const { email, password, fullName, code, roleId, school, department, class: classVal } = req.body;
     const user = await User.findByPk(req.params.id);
 
     if (!user) {
       return res.status(404).json({ message: 'Không tìm thấy tài khoản.' });
+    }
+
+    // Manager can only edit users within their school
+    if (req.user.role === 'Manager') {
+      const manager = await User.findByPk(req.user.id);
+      if (!manager || user.school !== manager.school) {
+        return res.status(403).json({ message: 'Bạn chỉ có thể chỉnh sửa tài khoản trong trường của mình.' });
+      }
     }
 
     const targetRoleId = roleId || user.roleId;
@@ -122,14 +165,22 @@ router.put('/:id', authenticateToken, authorizeRoles('Admin'), async (req, res) 
   }
 });
 
-// 2.2 Change User Role (Admin only)
-router.put('/:id/role', authenticateToken, authorizeRoles('Admin'), async (req, res) => {
+// 2.2 Change User Role (Admin, Manager)
+router.put('/:id/role', authenticateToken, authorizeRoles(['Admin', 'Manager']), async (req, res) => {
   try {
     const { roleId } = req.body;
     const user = await User.findByPk(req.params.id);
     
     if (!user) {
       return res.status(404).json({ message: 'Không tìm thấy người dùng này.' });
+    }
+
+    // Manager can only change roles within their school
+    if (req.user.role === 'Manager') {
+      const manager = await User.findByPk(req.user.id);
+      if (!manager || user.school !== manager.school) {
+        return res.status(403).json({ message: 'Bạn chỉ có thể thay đổi vai trò của người dùng trong trường của mình.' });
+      }
     }
 
     const role = await Role.findByPk(roleId);
@@ -146,8 +197,37 @@ router.put('/:id/role', authenticateToken, authorizeRoles('Admin'), async (req, 
   }
 });
 
-// 3. Delete User (Admin only)
-router.delete('/:id', authenticateToken, authorizeRoles('Admin'), async (req, res) => {
+// 2.3 Approve Pending Account (Admin, Manager)
+router.put('/:id/approve', authenticateToken, authorizeRoles(['Admin', 'Manager']), async (req, res) => {
+  try {
+    const user = await User.findByPk(req.params.id);
+    if (!user) {
+      return res.status(404).json({ message: 'Không tìm thấy tài khoản cần phê duyệt.' });
+    }
+
+    if (user.status !== 'Pending') {
+      return res.status(400).json({ message: 'Tài khoản này không ở trạng thái chờ phê duyệt.' });
+    }
+
+    // Manager can only approve users within their school
+    if (req.user.role === 'Manager') {
+      const manager = await User.findByPk(req.user.id);
+      if (!manager || (user.school && user.school !== manager.school)) {
+        return res.status(403).json({ message: 'Bạn chỉ có thể phê duyệt tài khoản trong trường của mình.' });
+      }
+    }
+
+    user.status = 'Active';
+    await user.save();
+
+    res.json({ message: 'Phê duyệt tài khoản thành công! Tài khoản đã được kích hoạt.' });
+  } catch (error) {
+    res.status(500).json({ message: 'Lỗi phê duyệt tài khoản.', error: error.message });
+  }
+});
+
+// 3. Delete User (Admin, Manager)
+router.delete('/:id', authenticateToken, authorizeRoles(['Admin', 'Manager']), async (req, res) => {
   try {
     const user = await User.findByPk(req.params.id);
     if (!user) {
@@ -156,6 +236,14 @@ router.delete('/:id', authenticateToken, authorizeRoles('Admin'), async (req, re
 
     if (user.id === req.user.id) {
       return res.status(400).json({ message: 'Bạn không thể tự xóa tài khoản của chính mình.' });
+    }
+
+    // Manager can only delete users within their school
+    if (req.user.role === 'Manager') {
+      const manager = await User.findByPk(req.user.id);
+      if (!manager || user.school !== manager.school) {
+        return res.status(403).json({ message: 'Bạn chỉ có thể xóa tài khoản trong trường của mình.' });
+      }
     }
 
     await user.destroy();

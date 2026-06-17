@@ -10,11 +10,8 @@ const DEPARTMENTS = {};
 const CLASSES = {};
 
 const DEMO_ACCOUNTS = import.meta.env.PROD
-  ? [
-      { email: 'admin@edu.vn',     name: 'Nguyễn Quản Trị',    role: 'Admin',    avatar: '👑', color: '#ef4444' }
-    ]
+  ? []
   : [
-      { email: 'admin@edu.vn',     name: 'Nguyễn Quản Trị',    role: 'Admin',    avatar: '👑', color: '#ef4444' },
       { email: 'manager@edu.vn',   name: 'Trần Cán Bộ',       role: 'Manager',  avatar: '📊', color: '#8b5cf6' },
       { email: 'student1@edu.vn',  name: 'Trần Kim Liên',      role: 'Student',  avatar: '🎓', color: '#6E9AE0' },
       { email: 'lecturer1@edu.vn', name: 'Phạm Giảng Viên',    role: 'Lecturer', avatar: '📚', color: '#22c55e' },
@@ -209,6 +206,8 @@ export default function Login({ onLogin, initialTab = 'login' }) {
   // Demo accounts modal
   const [showDemoAccounts, setShowDemoAccounts] = useState(false);
   const [demoLoading, setDemoLoading] = useState(null);
+  const [isSchoolLocked, setIsSchoolLocked] = useState(false);
+  const [isCodeLocked, setIsCodeLocked] = useState(false);
 
   // Cartoon animation states
   const [mouseX, setMouseX] = useState(0);
@@ -423,13 +422,22 @@ export default function Login({ onLogin, initialTab = 'login' }) {
 
       if (data.isNewUser) {
         setGoogleUserData({ email: data.email, name: data.name });
+        const depts = dynamicDepartments[data.detectedSchool] || [];
+        const defaultDept = depts[0] || '';
+        const classes = dynamicClasses[defaultDept] || [];
+        const defaultClass = classes[0] || '';
         setRegForm(prev => ({
           ...prev,
           fullName: data.name,
           email: data.email,
           roleId: '3',
-          code: ''
+          code: data.detectedCode || '',
+          school: data.detectedSchool || prev.school || '',
+          department: defaultDept || prev.department || '',
+          class: defaultClass || prev.class || ''
         }));
+        setIsSchoolLocked(!!data.detectedSchool);
+        setIsCodeLocked(!!data.detectedCode);
         setActiveTab('google-register');
       } else {
         onLogin(data.user, data.token);
@@ -453,6 +461,11 @@ export default function Login({ onLogin, initialTab = 'login' }) {
     setError('');
     setSuccess('');
     window.history.replaceState(null, '', tab === 'login' ? '#/login' : '#/register');
+    setIsSchoolLocked(false);
+    setIsCodeLocked(false);
+    if (tab === 'register') {
+      setRegForm(prev => ({ ...prev, roleId: '6' }));
+    }
   };
 
   // Dynamic values helper based on selected school/department/role
@@ -605,10 +618,10 @@ export default function Login({ onLogin, initialTab = 'login' }) {
         fullName: regForm.fullName.trim(),
         email: regForm.email.trim(),
         password: regForm.password,
-        roleId: parseInt(regForm.roleId),
-        school: regForm.school,
-        department: regForm.department,
-        class: regForm.roleId === '3' ? regForm.class : null,
+        roleId: 6, // Forced to Employer
+        school: null,
+        department: null,
+        class: null,
         code: regForm.code.trim()
       };
 
@@ -965,11 +978,15 @@ export default function Login({ onLogin, initialTab = 'login' }) {
           {/* ────────── TAB 2: REGISTER FORM ────────── */}
           {activeTab === 'register' && (
             <form onSubmit={handleRegisterSubmit}>
+              <div style={{ background: '#FFF8E6', border: '1px solid #FBECAC', borderRadius: 12, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: '#92400e', lineHeight: 1.5 }}>
+                ⚠️ <strong>Lưu ý:</strong> Đăng ký truyền thống chỉ dành cho <strong>Nhà tuyển dụng</strong>. Sinh viên, Giảng viên và Cựu sinh viên bắt buộc sử dụng <strong>Google SSO</strong> để đăng nhập/đăng ký.
+              </div>
+
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
                 <div>
-                  <label style={labelStyle}>Họ và Tên *</label>
+                  <label style={labelStyle}>Họ và Tên doanh nghiệp *</label>
                   <input
-                    type="text" required placeholder="Nguyễn Văn A" value={regForm.fullName}
+                    type="text" required placeholder="Tên công ty / Đại diện" value={regForm.fullName}
                     onChange={e => setRegForm(prev => ({ ...prev, fullName: e.target.value }))}
                     style={inputStyle}
                     onFocus={() => setIsTyping(true)}
@@ -977,9 +994,9 @@ export default function Login({ onLogin, initialTab = 'login' }) {
                   />
                 </div>
                 <div>
-                  <label style={labelStyle}>Email *</label>
+                  <label style={labelStyle}>Email liên hệ *</label>
                   <input
-                    type="email" required placeholder="example@edu.vn" value={regForm.email}
+                    type="email" required placeholder="employer@company.com" value={regForm.email}
                     onChange={e => setRegForm(prev => ({ ...prev, email: e.target.value }))}
                     style={inputStyle}
                     onFocus={() => setIsTyping(true)}
@@ -991,21 +1008,15 @@ export default function Login({ onLogin, initialTab = 'login' }) {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
                 <div>
                   <label style={labelStyle}>Vai trò *</label>
-                  <select
-                    value={regForm.roleId}
-                    onChange={e => setRegForm(prev => ({ ...prev, roleId: e.target.value }))}
-                    style={{ ...inputStyle, padding: '10px 12px' }}
-                  >
-                    <option value="3">Sinh viên</option>
-                    <option value="4">Giảng viên</option>
-                    <option value="5">Cựu sinh viên</option>
-                    <option value="6">Nhà tuyển dụng</option>
-                  </select>
+                  <input
+                    type="text" disabled value="Nhà tuyển dụng"
+                    style={{ ...inputStyle, background: '#E2E8F0', cursor: 'not-allowed', color: '#4A5568' }}
+                  />
                 </div>
                 <div>
-                  <label style={labelStyle}>{getCodeInfo(regForm.roleId).label}</label>
+                  <label style={labelStyle}>Mã số thuế / Mã Doanh nghiệp *</label>
                   <input
-                    type="text" required placeholder={getCodeInfo(regForm.roleId).placeholder} value={regForm.code}
+                    type="text" required placeholder="Ví dụ: TAX_FPT_01" value={regForm.code}
                     onChange={e => setRegForm(prev => ({ ...prev, code: e.target.value }))}
                     style={inputStyle}
                     onFocus={() => setIsTyping(true)}
@@ -1013,44 +1024,6 @@ export default function Login({ onLogin, initialTab = 'login' }) {
                   />
                 </div>
               </div>
-
-              {/* School selection */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
-                <div>
-                  <label style={labelStyle}>Trường đại học *</label>
-                  <select
-                    value={regForm.school}
-                    onChange={e => handleSchoolChange(e.target.value)}
-                    style={{ ...inputStyle, padding: '10px 12px' }}
-                  >
-                    {dynamicSchools.map(sc => <option key={sc} value={sc}>{sc}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label style={labelStyle}>Khoa / Phòng ban *</label>
-                  <select
-                    value={regForm.department}
-                    onChange={e => handleDeptChange(e.target.value)}
-                    style={{ ...inputStyle, padding: '10px 12px' }}
-                  >
-                    {(dynamicDepartments[regForm.school] || []).map(dp => <option key={dp} value={dp}>{dp}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              {/* Class selection (only if Student) */}
-              {regForm.roleId === '3' && (
-                <div style={{ marginBottom: 14 }}>
-                  <label style={labelStyle}>Lớp hành chính *</label>
-                  <select
-                    value={regForm.class}
-                    onChange={e => setRegForm(prev => ({ ...prev, class: e.target.value }))}
-                    style={{ ...inputStyle, padding: '10px 12px' }}
-                  >
-                    {(dynamicClasses[regForm.department] || []).map(cl => <option key={cl} value={cl}>{cl}</option>)}
-                  </select>
-                </div>
-              )}
 
               <div style={{ marginBottom: 20 }}>
                 <label style={labelStyle}>Mật khẩu truy cập *</label>
@@ -1108,7 +1081,8 @@ export default function Login({ onLogin, initialTab = 'login' }) {
                   <input
                     type="text" required placeholder={getCodeInfo(regForm.roleId).placeholder} value={regForm.code}
                     onChange={e => setRegForm(prev => ({ ...prev, code: e.target.value }))}
-                    style={inputStyle}
+                    disabled={isCodeLocked}
+                    style={{ ...inputStyle, background: isCodeLocked ? '#E2E8F0' : '#F9FAFD', cursor: isCodeLocked ? 'not-allowed' : 'default', color: isCodeLocked ? '#4A5568' : 'inherit' }}
                     onFocus={() => setIsTyping(true)}
                     onBlur={() => setIsTyping(false)}
                   />
@@ -1122,7 +1096,8 @@ export default function Login({ onLogin, initialTab = 'login' }) {
                   <select
                     value={regForm.school}
                     onChange={e => handleSchoolChange(e.target.value)}
-                    style={{ ...inputStyle, padding: '10px 12px' }}
+                    disabled={isSchoolLocked}
+                    style={{ ...inputStyle, padding: '10px 12px', background: isSchoolLocked ? '#E2E8F0' : '#F9FAFD', cursor: isSchoolLocked ? 'not-allowed' : 'default', color: isSchoolLocked ? '#4A5568' : 'inherit' }}
                   >
                     {dynamicSchools.map(sc => <option key={sc} value={sc}>{sc}</option>)}
                   </select>
