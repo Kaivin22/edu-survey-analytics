@@ -75,7 +75,7 @@ async function startServer() {
       await seed();
     } else {
       console.log('Syncing database schema...');
-      await sequelize.sync();
+      await sequelize.sync({ alter: true });
       console.log('Database schema synchronized.');
 
       try {
