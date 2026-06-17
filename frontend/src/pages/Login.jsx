@@ -1169,12 +1169,7 @@ export default function Login({ onLogin, initialTab = 'login' }) {
                   </button>
                 )}
 
-                <button
-                  onClick={() => { setShowDemoAccounts(true); setError(''); }}
-                  style={{ width: '100%', padding: '9px 16px', borderRadius: 12, border: '1px dashed #6E9AE0', background: '#EEF4FD', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer', fontWeight: 600, fontSize: 13, color: '#4a6fa5' }}
-                >
-                  🔑 Chọn tài khoản hệ thống (Demo)
-                </button>
+
               </div>
             </>
           )}
@@ -1182,40 +1177,7 @@ export default function Login({ onLogin, initialTab = 'login' }) {
         </div>
       </div>
 
-      {/* Google Demo Accounts Modal */}
-      {showDemoAccounts && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
-          onClick={e => e.target === e.currentTarget && setShowDemoAccounts(false)}
-        >
-          <div style={{ background: '#fff', borderRadius: 20, padding: '32px 28px', width: '100%', maxWidth: 420, boxShadow: '0 24px 64px rgba(0,0,0,0.3)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <div>
-                <h2 style={{ fontSize: 18, fontWeight: 800, color: '#0d1c2f', marginBottom: 4 }}>Chọn tài khoản Demo nhanh</h2>
-                <p style={{ fontSize: 13, color: '#718096' }}>Chọn vai trò bạn muốn đăng nhập nhanh để trải nghiệm</p>
-              </div>
-              <button onClick={() => setShowDemoAccounts(false)} style={{ background: '#F9FAFD', border: '1px solid #D2DBEA', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#718096' }}>×</button>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {DEMO_ACCOUNTS.map(acc => (
-                <button key={acc.email}
-                  onClick={() => handleDemoLogin(acc)}
-                  disabled={demoLoading === acc.email}
-                  style={{ width: '100%', padding: '12px 16px', borderRadius: 12, border: '1.5px solid #D2DBEA', background: demoLoading === acc.email ? '#F9FAFD' : '#fff', display: 'flex', alignItems: 'center', gap: 12, cursor: demoLoading === acc.email ? 'wait' : 'pointer', transition: 'all 0.2s', textAlign: 'left' }}
-                  onMouseOver={e => { if (!demoLoading) { e.currentTarget.style.borderColor = acc.color; e.currentTarget.style.background = `${acc.color}10`; } }}
-                  onMouseOut={e => { e.currentTarget.style.borderColor = '#D2DBEA'; e.currentTarget.style.background = '#fff'; }}
-                >
-                  <div style={{ width: 40, height: 40, borderRadius: '50%', background: `${acc.color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>{acc.avatar}</div>
-                  <div style={{ flex: 1 }}>
-                    <p style={{ fontWeight: 700, fontSize: 14, color: '#2d4771', marginBottom: 2 }}>{acc.name}</p>
-                    <p style={{ fontSize: 12, color: '#718096' }}>{acc.email} · <span style={{ color: acc.color, fontWeight: 600 }}>{ROLE_LABELS[acc.role]}</span></p>
-                  </div>
-                  {demoLoading === acc.email && <Loader2 size={16} color={acc.color} className="animate-spin" style={{ flexShrink: 0 }} />}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+
 
       {/* Mock Google Login Modal */}
       {showMockGoogleModal && (
