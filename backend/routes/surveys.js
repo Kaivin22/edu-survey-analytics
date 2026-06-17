@@ -33,9 +33,9 @@ router.get('/', authenticateToken, async (req, res) => {
       if (userRole === 'Manager') {
         const manager = await User.findByPk(userId);
         if (manager && manager.school) {
-          whereClause.school = {
-            [Op.or]: [null, manager.school]
-          };
+          whereClause.school = manager.school;
+        } else {
+          return res.json([]);
         }
       }
 
@@ -78,12 +78,6 @@ router.get('/', authenticateToken, async (req, res) => {
         surveyWhere.department = {
           [Op.or]: [null, user.department]
         };
-        // Filter: for students, survey must match user's class or be null
-        if (userRole === 'Student') {
-          surveyWhere.class = {
-            [Op.or]: [null, user.class]
-          };
-        }
       }
 
       const surveys = await Survey.findAll({
@@ -105,6 +99,14 @@ router.get('/', authenticateToken, async (req, res) => {
           if (submittedIds.includes(s.id)) return false;
           // Filter out expired surveys
           if (s.endDate && new Date(s.endDate) < now) return false;
+          // Filter: for students, survey must match user's class if survey.class is specified
+          if (userRole === 'Student' && s.class) {
+            if (!user.class) return false;
+            const targetClasses = s.class.split(',').map(c => c.trim().toLowerCase());
+            if (!targetClasses.includes(user.class.toLowerCase())) {
+              return false;
+            }
+          }
           return true;
         })
         .map(s => ({
@@ -180,6 +182,15 @@ router.post('/', authenticateToken, authorizeRoles(['Admin', 'Manager', 'Lecture
       return res.status(400).json({ message: 'Tiêu đề và đối tượng khảo sát là bắt buộc.' });
     }
 
+    let finalSchool = school || null;
+    if (req.user.role === 'Manager') {
+      const manager = await User.findByPk(req.user.id);
+      if (!manager || !manager.school) {
+        return res.status(403).json({ message: 'Không xác định được trường của bạn.' });
+      }
+      finalSchool = manager.school;
+    }
+
     const survey = await Survey.create({
       title,
       description,
@@ -188,7 +199,7 @@ router.post('/', authenticateToken, authorizeRoles(['Admin', 'Manager', 'Lecture
       startDate: startDate || new Date(),
       endDate: endDate || null,
       createdBy: req.user.id,
-      school: school || null,
+      school: finalSchool,
       department: department || null,
       class: classVal || null
     }, { transaction });
@@ -241,6 +252,15 @@ router.put('/:id', authenticateToken, authorizeRoles(['Admin', 'Manager', 'Lectu
       return res.status(403).json({ message: 'Bạn không có quyền chỉnh sửa khảo sát này.' });
     }
 
+    let finalSchool = school || null;
+    if (req.user.role === 'Manager') {
+      const manager = await User.findByPk(req.user.id);
+      if (!manager || !manager.school || survey.school !== manager.school) {
+        return res.status(403).json({ message: 'Bạn chỉ có thể chỉnh sửa khảo sát của trường mình.' });
+      }
+      finalSchool = manager.school;
+    }
+
     // Update main fields
     await survey.update({
       title,
@@ -249,7 +269,7 @@ router.put('/:id', authenticateToken, authorizeRoles(['Admin', 'Manager', 'Lectu
       status,
       startDate,
       endDate,
-      school: school || null,
+      school: finalSchool,
       department: department || null,
       class: classVal || null
     }, { transaction });
@@ -304,6 +324,13 @@ router.delete('/:id', authenticateToken, authorizeRoles(['Admin', 'Manager', 'Le
     // Check ownership for non-admin/manager roles
     if (['Lecturer', 'Employer'].includes(req.user.role) && survey.createdBy !== req.user.id) {
       return res.status(403).json({ message: 'Bạn không có quyền xóa khảo sát này.' });
+    }
+
+    if (req.user.role === 'Manager') {
+      const manager = await User.findByPk(req.user.id);
+      if (!manager || !manager.school || survey.school !== manager.school) {
+        return res.status(403).json({ message: 'Bạn chỉ có thể xóa khảo sát của trường mình.' });
+      }
     }
 
     await survey.destroy(); // Cascades deletes to Questions, Options, Responses
@@ -463,7 +490,12 @@ router.get('/:id/stats', authenticateToken, authorizeRoles(['Admin', 'Manager', 
       assignedWhere.department = survey.department;
     }
     if (survey.class) {
-      assignedWhere.class = survey.class;
+      const classes = survey.class.split(',').map(c => c.trim()).filter(Boolean);
+      if (classes.length > 1) {
+        assignedWhere.class = { [Op.in]: classes };
+      } else if (classes.length === 1) {
+        assignedWhere.class = classes[0];
+      }
     }
 
     // Also apply query filters from frontend

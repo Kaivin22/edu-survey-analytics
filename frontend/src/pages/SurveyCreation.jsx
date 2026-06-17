@@ -22,7 +22,7 @@ const toDatetimeLocalString = (date) => {
   return new Date(d.getTime() - tzOffset).toISOString().slice(0, 16);
 };
 
-function SurveyCreation({ isEdit = false }) {
+function SurveyCreation({ isEdit = false, user }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
@@ -34,9 +34,9 @@ function SurveyCreation({ isEdit = false }) {
     status: 'Draft',
     startDate: toDatetimeLocalString(new Date()),
     endDate: '',
-    school: '',
+    school: user?.role === 'Manager' ? (user.school || '') : '',
     department: '',
-    class: ''
+    class: []
   });
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -90,9 +90,9 @@ function SurveyCreation({ isEdit = false }) {
         status: data.status,
         startDate: data.startDate ? toDatetimeLocalString(data.startDate) : toDatetimeLocalString(new Date()),
         endDate: data.endDate ? toDatetimeLocalString(data.endDate) : '',
-        school: data.school || '',
+        school: data.school || (user?.role === 'Manager' ? (user.school || '') : ''),
         department: data.department || '',
-        class: data.class || ''
+        class: data.class ? data.class.split(',').map(c => c.trim()).filter(Boolean) : []
       });
       setQuestions(data.Questions.map(q => ({ ...q, options: q.options || [] })));
     } catch (e) { setError(e.message); } finally { setLoading(false); }
@@ -143,7 +143,7 @@ function SurveyCreation({ isEdit = false }) {
           questions,
           school: form.school || null,
           department: form.department || null,
-          class: form.class || null
+          class: Array.isArray(form.class) && form.class.length > 0 ? form.class.join(',') : null
         }),
       });
       const data = await res.json();
@@ -231,11 +231,12 @@ function SurveyCreation({ isEdit = false }) {
                   <label className="block text-sm font-semibold mb-1 ml-1" style={{ color: '#2d4771' }}>Trường học mục tiêu</label>
                   <select
                     value={form.school}
-                    onChange={e => setForm(f => ({ ...f, school: e.target.value, department: '', class: '' }))}
-                    className="w-full px-4 py-2.5 rounded-2xl border text-sm font-bold outline-none"
+                    disabled={user?.role === 'Manager'}
+                    onChange={e => setForm(f => ({ ...f, school: e.target.value, department: '', class: [] }))}
+                    className="w-full px-4 py-2.5 rounded-2xl border text-sm font-bold outline-none disabled:opacity-75"
                     style={selectStyle}
                   >
-                    <option value="">Tất cả các trường (Đà Nẵng)</option>
+                    {user?.role !== 'Manager' && <option value="">Tất cả các trường (Đà Nẵng)</option>}
                     {dynamicSchools.map(sc => (
                       <option key={sc} value={sc}>{sc}</option>
                     ))}
@@ -247,7 +248,7 @@ function SurveyCreation({ isEdit = false }) {
                   <select
                     value={form.department}
                     disabled={!form.school}
-                    onChange={e => setForm(f => ({ ...f, department: e.target.value, class: '' }))}
+                    onChange={e => setForm(f => ({ ...f, department: e.target.value, class: [] }))}
                     className="w-full px-4 py-2.5 rounded-2xl border text-sm font-bold outline-none disabled:opacity-50"
                     style={selectStyle}
                   >
@@ -259,19 +260,27 @@ function SurveyCreation({ isEdit = false }) {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold mb-1 ml-1" style={{ color: '#2d4771' }}>Lớp mục tiêu</label>
+                  <label className="block text-sm font-semibold mb-1 ml-1" style={{ color: '#2d4771' }}>Lớp mục tiêu <span className="text-xs font-normal" style={{ color: '#6E9AE0' }}>(giữ CTRL để chọn nhiều lớp)</span></label>
                   <select
+                    multiple
                     disabled={!form.department || form.targetAudience !== 'Student'}
                     value={form.class}
-                    onChange={e => setForm(f => ({ ...f, class: e.target.value }))}
+                    onChange={e => {
+                      const selectedValues = Array.from(e.target.selectedOptions, opt => opt.value);
+                      setForm(f => ({ ...f, class: selectedValues }));
+                    }}
                     className="w-full px-4 py-2.5 rounded-2xl border text-sm font-bold outline-none disabled:opacity-50"
-                    style={selectStyle}
+                    style={{ ...selectStyle, minHeight: '90px' }}
                   >
-                    <option value="">Tất cả các lớp</option>
                     {classes.map(cl => (
                       <option key={cl} value={cl}>{cl}</option>
                     ))}
                   </select>
+                  {form.class.length > 0 && (
+                    <p className="text-xs mt-1 font-semibold" style={{ color: '#6E9AE0' }}>
+                      Đã chọn: {form.class.join(', ')}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
