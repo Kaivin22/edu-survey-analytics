@@ -9,15 +9,7 @@ const SCHOOLS = [];
 const DEPARTMENTS = {};
 const CLASSES = {};
 
-const DEMO_ACCOUNTS = import.meta.env.PROD
-  ? []
-  : [
-      { email: 'manager@edu.vn',   name: 'Trần Cán Bộ',       role: 'Manager',  avatar: '📊', color: '#8b5cf6' },
-      { email: 'student1@edu.vn',  name: 'Trần Kim Liên',      role: 'Student',  avatar: '🎓', color: '#6E9AE0' },
-      { email: 'lecturer1@edu.vn', name: 'Phạm Giảng Viên',    role: 'Lecturer', avatar: '📚', color: '#22c55e' },
-      { email: 'alumnus1@edu.vn',  name: 'Hoàng Cựu SV',       role: 'Alumnus',  avatar: '🏢', color: '#f59e0b' },
-      { email: 'employer1@edu.vn', name: 'FPT Software (Đại diện)', role: 'Employer', avatar: '💼', color: '#06b6d4' },
-    ];
+
 
 const ROLE_LABELS = { Admin:'Quản trị viên', Manager:'Cán bộ quản lý', Student:'Sinh viên', Lecturer:'Giảng viên', Alumnus:'Cựu sinh viên', Employer:'Nhà tuyển dụng' };
 
@@ -203,9 +195,7 @@ export default function Login({ onLogin, initialTab = 'login' }) {
   const [mockGoogleEmail, setMockGoogleEmail] = useState('googletest@edu.vn');
   const [mockGoogleName, setMockGoogleName] = useState('Nguyễn Google');
 
-  // Demo accounts modal
-  const [showDemoAccounts, setShowDemoAccounts] = useState(false);
-  const [demoLoading, setDemoLoading] = useState(null);
+
   const [isSchoolLocked, setIsSchoolLocked] = useState(false);
   const [isCodeLocked, setIsCodeLocked] = useState(false);
 
@@ -646,27 +636,7 @@ export default function Login({ onLogin, initialTab = 'login' }) {
     }
   };
 
-  // Demo accounts login helper
-  const handleDemoLogin = async (account) => {
-    setDemoLoading(account.email);
-    setError('');
-    try {
-      const res = await fetch(`${API_URL}/auth/google-login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: account.email, name: account.name })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
-      setShowDemoAccounts(false);
-      onLogin(data.user, data.token);
-      navigate('/dashboard');
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setDemoLoading(null);
-    }
-  };
+
 
   const inputStyle = { width: '100%', padding: '11px 13px 11px 13px', borderRadius: 12, border: '1.5px solid #D2DBEA', background: '#F9FAFD', fontSize: 14, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' };
   const labelStyle = { display: 'block', fontSize: 13, fontWeight: 700, color: '#2d4771', marginBottom: 5 };
