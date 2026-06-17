@@ -86,15 +86,12 @@ function Dashboard({ user, onLogout, onUpdateUser }) {
       <nav className="sticky top-0 z-30 shadow-sm" style={{ background: 'linear-gradient(135deg, #6E9AE0, #487bc9)' }}>
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <Link to="/dashboard" className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center text-white text-decoration-none"><ClipboardList size={20} /></Link>
-            <span className="text-xl font-extrabold text-white tracking-tight">EDU SURVEY</span>
+            <Link to="/" className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center text-white text-decoration-none"><ClipboardList size={20} /></Link>
+            <Link to="/" className="text-xl font-extrabold text-white tracking-tight" style={{ textDecoration: 'none' }}>Academic Synergy</Link>
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Quay lại Trang chủ */}
-            <Link to="/" className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold bg-white/15 hover:bg-white/25 text-white transition-all text-decoration-none">
-              🏠 Trang chủ
-            </Link>
+
 
             {/* Bell */}
             <div className="relative">
@@ -353,9 +350,6 @@ function Dashboard({ user, onLogout, onUpdateUser }) {
                                 <button onClick={() => navigate(`/survey/${s.id}/stats`)} title="Xem thống kê" className="p-2 rounded-xl transition-all" style={{ background: '#EEF4FD', color: '#6E9AE0' }}>
                                   <Eye size={15} />
                                 </button>
-                                <a href={`${API_URL}/reports/${s.id}/excel`} target="_blank" rel="noreferrer" title="Xuất Excel" className="p-2 rounded-xl transition-all flex items-center" style={{ background: '#F0FDF4', color: '#16a34a' }}>
-                                  <FileSpreadsheet size={15} />
-                                </a>
                                 <button onClick={() => navigate(`/survey/edit/${s.id}`)} title="Chỉnh sửa" className="p-2 rounded-xl transition-all" style={{ background: '#FFFBEB', color: '#D97706' }}>
                                   <Edit size={15} />
                                 </button>

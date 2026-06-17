@@ -8,6 +8,34 @@ require('dotenv').config();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'edu_survey_stakeholder_secret_key_2026';
 
+// Helper to detect school from email domain (excl. HCMUTE as requested)
+const getSchoolFromEmail = (email) => {
+  if (!email) return null;
+  const domain = email.split('@')[1];
+  if (!domain) return null;
+  const domainLower = domain.toLowerCase();
+
+  if (domainLower.endsWith('dau.edu.vn')) {
+    return 'Kiến trúc Đà Nẵng (DAU)';
+  }
+  if (domainLower.endsWith('vku.udn.vn')) {
+    return 'Việt Hàn (VKU)';
+  }
+  if (domainLower.endsWith('edu.vn') || domainLower.endsWith('gmail.com')) {
+    // Development / Testing fallback
+    return 'Kiến trúc Đà Nẵng (DAU)';
+  }
+  return null;
+};
+
+// Helper to extract student/lecturer code from email prefix
+const getCodeFromEmail = (email) => {
+  if (!email) return null;
+  const username = email.split('@')[0];
+  const parsedDigits = username.replace(/\D/g, '');
+  return parsedDigits || username.toUpperCase();
+};
+
 // Helper to validate code (identification code)
 const validateCode = (code, roleIdOrName) => {
   if (!code) return null;
@@ -34,7 +62,7 @@ router.get('/roles', async (req, res) => {
   }
 });
 
-// 2. Register
+// 2. Register (Employers only)
 router.post('/register', async (req, res) => {
   try {
     const { email, password, fullName, code, roleId, school, department, class: classVal } = req.body;
@@ -43,13 +71,13 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ message: 'Vui lòng cung cấp đầy đủ thông tin bắt buộc.' });
     }
 
+    if (parseInt(roleId) !== 6) {
+      return res.status(400).json({ message: 'Sinh viên, Giảng viên và Cựu sinh viên vui lòng sử dụng tính năng Đăng nhập bằng Google.' });
+    }
+
     const codeError = validateCode(code, roleId);
     if (codeError) {
       return res.status(400).json({ message: codeError });
-    }
-
-    if (parseInt(roleId) === 1 || parseInt(roleId) === 2) {
-      return res.status(403).json({ message: 'Không thể đăng ký tài khoản Quản trị viên hoặc Cán bộ quản lý công khai.' });
     }
 
     const existingUser = await User.findOne({ where: { email } });
@@ -69,13 +97,14 @@ router.post('/register', async (req, res) => {
       fullName,
       code,
       roleId,
-      school,
-      department,
-      class: classVal
+      school: school || null,
+      department: department || null,
+      class: classVal || null,
+      status: 'Pending' // Employers need manual approval
     });
 
     res.status(201).json({
-      message: 'Đăng ký tài khoản thành công!',
+      message: 'Đăng ký tài khoản thành công! Tài khoản của bạn hiện đang ở trạng thái chờ Cán bộ quản lý trường phê duyệt.',
       user: {
         id: newUser.id,
         email: newUser.email,
@@ -84,7 +113,8 @@ router.post('/register', async (req, res) => {
         role: role.name,
         school: newUser.school,
         department: newUser.department,
-        class: newUser.class
+        class: newUser.class,
+        status: newUser.status
       }
     });
   } catch (error) {
@@ -113,6 +143,10 @@ router.post('/login', async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: 'Tài khoản hoặc mật khẩu không chính xác.' });
+    }
+
+    if (user.status === 'Pending') {
+      return res.status(403).json({ message: 'Tài khoản của bạn đang chờ Cán bộ quản lý trường phê duyệt. Vui lòng quay lại sau.' });
     }
 
     const token = jwt.sign(
@@ -406,7 +440,15 @@ router.post('/google-login', async (req, res) => {
     });
 
     if (!user) {
-      return res.json({ isNewUser: true, email, name });
+      // Auto-detect school from email domain for new user info
+      const detectedSchool = getSchoolFromEmail(email);
+      const detectedCode = getCodeFromEmail(email);
+      return res.json({ isNewUser: true, email, name, detectedSchool, detectedCode });
+    }
+
+    // Check pending status
+    if (user.status === 'Pending') {
+      return res.status(403).json({ message: 'Tài khoản của bạn đang chờ Cán bộ quản lý trường phê duyệt. Vui lòng quay lại sau.' });
     }
 
     const token = jwt.sign(
@@ -448,13 +490,27 @@ router.post('/google-register', async (req, res) => {
       return res.status(400).json({ message: 'Thông tin đăng ký Google thiếu email, họ tên hoặc vai trò.' });
     }
 
-    const codeError = validateCode(code, roleId);
-    if (codeError) {
-      return res.status(400).json({ message: codeError });
+    const parsedRoleId = parseInt(roleId);
+
+    if (parsedRoleId === 1 || parsedRoleId === 2) {
+      return res.status(403).json({ message: 'Không thể đăng ký tài khoản Quản trị viên hoặc Cán bộ quản lý công khai.' });
     }
 
-    if (parseInt(roleId) === 1 || parseInt(roleId) === 2) {
-      return res.status(403).json({ message: 'Không thể đăng ký tài khoản Quản trị viên hoặc Cán bộ quản lý công khai.' });
+    // For Student/Lecturer/Alumnus (roleId 3,4,5): require school-domain email
+    const detectedSchool = getSchoolFromEmail(email);
+    const detectedCode = getCodeFromEmail(email);
+
+    if ([3, 4, 5].includes(parsedRoleId) && !detectedSchool) {
+      return res.status(400).json({ message: 'Email này không thuộc tên miền của trường đại học được liên kết.' });
+    }
+
+    // Use detected values for school and code (auto-extraction from email)
+    const finalSchool = detectedSchool || school || null;
+    const finalCode = detectedCode || code || null;
+
+    const codeError = validateCode(finalCode, roleId);
+    if (codeError) {
+      return res.status(400).json({ message: codeError });
     }
 
     const existingUser = await User.findOne({ where: { email } });
@@ -473,11 +529,12 @@ router.post('/google-register', async (req, res) => {
       email,
       password: randomPassword,
       fullName: name,
-      code,
+      code: finalCode,
       roleId,
-      school,
-      department,
-      class: classVal
+      school: finalSchool,
+      department: department || null,
+      class: classVal || null,
+      status: 'Active' // Google-authenticated users are auto-approved
     });
 
     const token = jwt.sign(
@@ -507,6 +564,49 @@ router.post('/google-register', async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ message: 'Lỗi máy chủ khi đăng ký tài khoản Google.', error: error.message });
+  }
+});
+
+// 10. Contact Form - Send real email to admin
+router.post('/contact', async (req, res) => {
+  try {
+    const { name, email, subject, message } = req.body;
+    if (!name || !email || !message) {
+      return res.status(400).json({ message: 'Vui lòng cung cấp đầy đủ họ tên, email và nội dung tin nhắn.' });
+    }
+
+    const adminEmail = process.env.ADMIN_EMAIL || 'trankimlien31072004@gmail.com';
+
+    const mailOptions = {
+      from: process.env.SMTP_FROM || '"Academic Synergy" <your-email@gmail.com>',
+      to: adminEmail,
+      subject: `[Liên hệ] ${subject || 'Tin nhắn mới từ ' + name}`,
+      html: `
+        <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 25px; border: 1px solid #D2DBEA; border-radius: 16px; background-color: #F9FAFD;">
+          <h2 style="color: #6E9AE0; margin-top: 0; text-align: center;">Academic Synergy - Tin nhắn Liên hệ</h2>
+          <hr style="border: 0; border-top: 1px solid #D2DBEA; margin: 20px 0;">
+          <p><strong>Họ tên:</strong> ${name}</p>
+          <p><strong>Email:</strong> ${email}</p>
+          <p><strong>Chủ đề:</strong> ${subject || 'Không có chủ đề'}</p>
+          <hr style="border: 0; border-top: 1px solid #D2DBEA; margin: 20px 0;">
+          <p><strong>Nội dung:</strong></p>
+          <div style="background-color: #EEF4FD; padding: 15px; border-radius: 8px; margin: 10px 0;">
+            <p style="white-space: pre-wrap; color: #2d4771;">${message}</p>
+          </div>
+          <hr style="border: 0; border-top: 1px solid #D2DBEA; margin: 20px 0;">
+          <p style="font-size: 12px; color: #A0AEC0; text-align: center;">Email này được gửi tự động từ hệ thống Academic Synergy © ${new Date().getFullYear()}</p>
+        </div>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+    res.json({ message: 'Tin nhắn của bạn đã được gửi thành công! Chúng tôi sẽ phản hồi sớm nhất có thể.' });
+  } catch (error) {
+    console.error('Lỗi gửi email liên hệ:', error);
+    res.status(500).json({
+      message: 'Gửi tin nhắn thất bại. Vui lòng thử lại sau hoặc liên hệ trực tiếp qua email.',
+      error: error.message
+    });
   }
 });
 

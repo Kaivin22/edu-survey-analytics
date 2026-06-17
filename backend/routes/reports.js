@@ -18,6 +18,17 @@ const {
 } = require('../models');
 const { authenticateToken, authorizeRoles } = require('../middleware/auth');
 
+// Helper: Check Manager school access
+async function checkManagerSchoolAccess(req, survey) {
+  if (req.user.role === 'Manager') {
+    const manager = await User.findByPk(req.user.id);
+    if (manager && manager.school && survey.school && survey.school !== manager.school) {
+      return false;
+    }
+  }
+  return true;
+}
+
 // Helper: Get survey data with responses (with school/dept/class filters)
 async function getSurveyData(surveyId, filters = {}) {
   const survey = await Survey.findByPk(surveyId, {
@@ -89,6 +100,11 @@ router.get('/:surveyId/excel', authenticateToken, authorizeRoles(['Admin', 'Mana
     // Check ownership for Lecturer and Employer
     if (['Lecturer', 'Employer'].includes(req.user.role) && survey.createdBy !== req.user.id) {
       return res.status(403).json({ message: 'Bạn không có quyền tải báo cáo khảo sát này.' });
+    }
+
+    // Manager school isolation
+    if (!(await checkManagerSchoolAccess(req, survey))) {
+      return res.status(403).json({ message: 'Bạn chỉ có thể xuất báo cáo khảo sát trong trường của mình.' });
     }
 
     const workbook = new ExcelJS.Workbook();

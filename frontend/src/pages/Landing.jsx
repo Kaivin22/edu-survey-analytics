@@ -61,6 +61,8 @@ function smoothScroll(e, href) {
 export default function Landing({ user, onLogout }) {
   const [scrolled, setScrolled] = useState(false);
   const [formData, setFormData] = useState({ name: '', email: '', message: '' });
+  const [loadingContact, setLoadingContact] = useState(false);
+  const [contactError, setContactError] = useState('');
   const [formSent, setFormSent] = useState(false);
 
   useEffect(() => {
@@ -69,11 +71,27 @@ export default function Landing({ user, onLogout }) {
     return () => window.removeEventListener('scroll', handler);
   }, []);
 
-  const handleContact = (e) => {
+  const handleContact = async (e) => {
     e.preventDefault();
-    setFormSent(true);
-    setFormData({ name: '', email: '', message: '' });
-    setTimeout(() => setFormSent(false), 4000);
+    setLoadingContact(true);
+    setContactError('');
+    setFormSent(false);
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/auth/contact`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      setFormSent(true);
+      setFormData({ name: '', email: '', message: '' });
+      setTimeout(() => setFormSent(false), 5000);
+    } catch (err) {
+      setContactError(err.message || 'Lỗi gửi tin nhắn liên hệ.');
+    } finally {
+      setLoadingContact(false);
+    }
   };
 
   return (
@@ -88,9 +106,9 @@ export default function Landing({ user, onLogout }) {
         borderBottom: scrolled ? '1px solid rgba(210,219,234,0.6)' : 'none'
       }}>
         <div className="px-4 md:px-10" style={{ maxWidth: 1280, margin: '0 auto', height: 72, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div className="text-lg sm:text-xl md:text-2xl" style={{ fontWeight: 800, color: scrolled ? '#6E9AE0' : '#fff', letterSpacing: -0.5 }}>
+          <Link to="/" className="text-lg sm:text-xl md:text-2xl" style={{ fontWeight: 800, color: scrolled ? '#6E9AE0' : '#fff', letterSpacing: -0.5, textDecoration: 'none' }}>
             🎓 Academic Synergy
-          </div>
+          </Link>
           <div className="hidden lg:flex" style={{ display: 'flex', gap: 32, alignItems: 'center' }}>
             {NAV_LINKS.map(link => (
               <a key={link.label} href={link.href} onClick={e => smoothScroll(e, link.href)}
@@ -299,7 +317,7 @@ export default function Landing({ user, onLogout }) {
             <div>
               {[
                 { icon: '📍', label: 'Địa chỉ', value: 'Đại học Đà Nẵng, TP. Đà Nẵng' },
-                { icon: '📧', label: 'Email', value: 'khaosat@edu.vn' },
+                { icon: '📧', label: 'Email', value: 'trankimlien31072004@gmail.com' },
                 { icon: '📞', label: 'Hotline', value: '0236-xxxx-xxx' },
               ].map(item => (
                 <div key={item.label} style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
@@ -315,6 +333,11 @@ export default function Landing({ user, onLogout }) {
               {formSent && (
                 <div style={{ background: '#d1fae5', border: '1px solid #6ee7b7', borderRadius: 10, padding: '12px 16px', marginBottom: 20, color: '#065f46', fontWeight: 600, fontSize: 14 }}>
                   ✅ Cảm ơn bạn đã gửi tin nhắn! Chúng tôi sẽ phản hồi sớm nhất có thể.
+                </div>
+              )}
+              {contactError && (
+                <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 10, padding: '12px 16px', marginBottom: 20, color: '#991b1b', fontSize: 14 }}>
+                  ❌ {contactError}
                 </div>
               )}
               {['name', 'email', 'message'].map(field => {
@@ -337,8 +360,8 @@ export default function Landing({ user, onLogout }) {
                   </div>
                 );
               })}
-              <button type="submit" style={{ width: '100%', padding: '12px', borderRadius: 12, background: '#6E9AE0', color: '#fff', fontWeight: 700, fontSize: 15, border: 'none', cursor: 'pointer', boxShadow: '0 4px 14px rgba(110,154,224,0.4)' }}>
-                Gửi tin nhắn
+              <button type="submit" disabled={loadingContact} style={{ width: '100%', padding: '12px', borderRadius: 12, background: 'linear-gradient(135deg, #6E9AE0, #487bc9)', color: '#fff', fontWeight: 700, fontSize: 15, border: 'none', cursor: loadingContact ? 'not-allowed' : 'pointer', opacity: loadingContact ? 0.8 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 4px 14px rgba(110,154,224,0.45)' }}>
+                {loadingContact ? 'Đang gửi...' : 'Gửi tin nhắn'}
               </button>
             </form>
           </div>
@@ -358,7 +381,7 @@ export default function Landing({ user, onLogout }) {
           {[
             { title: 'Tài Nguyên', links: ['Chính sách bảo mật', 'Điều khoản sử dụng', 'Hỗ trợ'] },
             { title: 'Tính Năng', links: ['Tạo khảo sát', 'Thống kê & Báo cáo', 'Quản lý người dùng'] },
-            { title: 'Kết Nối', links: ['Email: khaosat@edu.vn', 'Hỗ trợ kỹ thuật', 'Phản hồi'] },
+            { title: 'Kết Nối', links: ['Email: trankimlien31072004@gmail.com', 'Hỗ trợ kỹ thuật', 'Phản hồi'] },
           ].map(col => (
             <div key={col.title}>
               <p style={{ color: '#6E9AE0', fontWeight: 700, fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 14 }}>{col.title}</p>

@@ -51,6 +51,11 @@ const User = sequelize.define('User', {
   class: {
     type: DataTypes.STRING,
     allowNull: true
+  },
+  status: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    defaultValue: 'Active'
   }
 });
 

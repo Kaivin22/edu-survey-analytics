@@ -98,7 +98,7 @@ async function startServer() {
       if (!adminExists) {
         console.log('No Admin account found in database. Creating genesis Admin...');
         const bcrypt = require('bcryptjs');
-        const adminEmail = process.env.ADMIN_EMAIL || 'admin@edu.vn';
+        const adminEmail = process.env.ADMIN_EMAIL || 'trankimlien31072004@gmail.com';
         const adminPassword = process.env.ADMIN_PASSWORD || '12345678';
         const hashedPw = await bcrypt.hash(adminPassword, 10);
         await User.create({

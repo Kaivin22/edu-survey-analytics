@@ -63,12 +63,8 @@ export default function ForgotPassword() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      {/* Video Background */}
-      <video autoPlay loop muted playsInline
-        style={{ position: 'fixed', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0 }}
-        src={LOGIN_VIDEO}
-      />
+    <div style={{ minHeight: '100vh', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #D2DBEA, #6E9AE0, #F9FAFD, #FBECAC)', fontFamily: "'Outfit', 'Inter', sans-serif" }}>
+
 
       {/* Floating Home Button */}
       <Link to="/" style={{ position: 'absolute', top: 24, left: 24, zIndex: 10, display: 'flex', alignItems: 'center', gap: 8, color: '#fff', textDecoration: 'none', fontWeight: 700, fontSize: 14, background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.25)', padding: '10px 18px', borderRadius: 12, backdropFilter: 'blur(8px)', transition: 'background 0.2s', boxShadow: '0 4px 12px rgba(0,0,0,0.25)' }}
@@ -147,7 +143,7 @@ export default function ForgotPassword() {
                 ⚠️ <strong>Lưu ý:</strong> Tính năng này chỉ hoạt động với tài khoản bạn đã tự đăng ký bằng email thực. Tài khoản demo hệ thống không hỗ trợ đặt lại mật khẩu.
               </div>
 
-              <button type="submit" disabled={loading} style={{ width: '100%', padding: '13px', borderRadius: 12, background: '#6E9AE0', color: '#fff', fontWeight: 700, fontSize: 15, border: 'none', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.8 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 4px 14px rgba(110,154,224,0.4)' }}>
+              <button type="submit" disabled={loading} style={{ width: '100%', padding: '13px', borderRadius: 12, background: 'linear-gradient(135deg, #6E9AE0, #487bc9)', color: '#fff', fontWeight: 700, fontSize: 15, border: 'none', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.8 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 4px 14px rgba(110,154,224,0.45)' }}>
                 {loading ? <><Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} />Đang gửi...</> : 'Gửi mã xác minh OTP →'}
               </button>
             </form>
@@ -208,7 +204,7 @@ export default function ForgotPassword() {
                 </div>
               </div>
 
-              <button type="submit" disabled={loading} style={{ width: '100%', padding: '13px', borderRadius: 12, background: '#6E9AE0', color: '#fff', fontWeight: 700, fontSize: 15, border: 'none', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.8 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 4px 14px rgba(110,154,224,0.4)', marginBottom: 12 }}>
+              <button type="submit" disabled={loading} style={{ width: '100%', padding: '13px', borderRadius: 12, background: 'linear-gradient(135deg, #6E9AE0, #487bc9)', color: '#fff', fontWeight: 700, fontSize: 15, border: 'none', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.8 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 4px 14px rgba(110,154,224,0.45)', marginBottom: 12 }}>
                 {loading ? <><Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} />Đang xử lý...</> : <><CheckCircle size={18} />Đặt lại mật khẩu</>}
               </button>
 

@@ -14,6 +14,14 @@ const inputBase = {
   color: '#2d4771',
 };
 
+const toDatetimeLocalString = (date) => {
+  if (!date) return '';
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return '';
+  const tzOffset = d.getTimezoneOffset() * 60000;
+  return new Date(d.getTime() - tzOffset).toISOString().slice(0, 16);
+};
+
 function SurveyCreation({ isEdit = false }) {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -24,7 +32,7 @@ function SurveyCreation({ isEdit = false }) {
     description: '',
     targetAudience: 'Student',
     status: 'Draft',
-    startDate: new Date().toISOString().split('T')[0],
+    startDate: toDatetimeLocalString(new Date()),
     endDate: '',
     school: '',
     department: '',
@@ -80,8 +88,8 @@ function SurveyCreation({ isEdit = false }) {
         description: data.description || '',
         targetAudience: data.targetAudience,
         status: data.status,
-        startDate: data.startDate ? new Date(data.startDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-        endDate: data.endDate ? new Date(data.endDate).toISOString().split('T')[0] : '',
+        startDate: data.startDate ? toDatetimeLocalString(data.startDate) : toDatetimeLocalString(new Date()),
+        endDate: data.endDate ? toDatetimeLocalString(data.endDate) : '',
         school: data.school || '',
         department: data.department || '',
         class: data.class || ''
@@ -112,13 +120,13 @@ function SurveyCreation({ isEdit = false }) {
       if (!q.text.trim()) { setError(`Nội dung câu hỏi ${i + 1} không được để trống.`); return; }
       if (['single_choice', 'multiple_choice'].includes(q.type) && q.options.length < 2) { setError(`Câu ${i + 1} phải có ít nhất 2 lựa chọn.`); return; }
     }
-    const today = new Date().toISOString().split('T')[0];
+    const today = toDatetimeLocalString(new Date());
     if (!isEdit && form.startDate < today) {
-      setError('Ngày bắt đầu không được ở quá khứ.');
+      setError('Thời gian bắt đầu không được ở quá khứ.');
       return;
     }
     if (form.endDate && form.endDate < form.startDate) {
-      setError('Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu.');
+      setError('Thời gian kết thúc phải lớn hơn thời gian bắt đầu.');
       return;
     }
     setLoading(true);
@@ -212,13 +220,13 @@ function SurveyCreation({ isEdit = false }) {
                 </div>
               ))}
               <div>
-                <label className="block text-sm font-semibold mb-1 ml-1" style={{ color: '#2d4771' }}>Ngày bắt đầu</label>
-                <input type="date" value={form.startDate} min={!isEdit ? new Date().toISOString().split('T')[0] : undefined} onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))}
+                <label className="block text-sm font-semibold mb-1 ml-1" style={{ color: '#2d4771' }}>Ngày giờ bắt đầu</label>
+                <input type="datetime-local" value={form.startDate} min={!isEdit ? toDatetimeLocalString(new Date()) : undefined} onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))}
                   className="w-full px-4 py-2 rounded-2xl border text-sm font-medium outline-none" style={inputBase} />
               </div>
               <div>
-                <label className="block text-sm font-semibold mb-1 ml-1" style={{ color: '#2d4771' }}>Ngày hết hạn</label>
-                <input type="date" value={form.endDate} min={form.startDate || new Date().toISOString().split('T')[0]} onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))}
+                <label className="block text-sm font-semibold mb-1 ml-1" style={{ color: '#2d4771' }}>Ngày giờ hết hạn</label>
+                <input type="datetime-local" value={form.endDate} min={form.startDate || toDatetimeLocalString(new Date())} onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))}
                   className="w-full px-4 py-2 rounded-2xl border text-sm font-medium outline-none" style={inputBase} />
               </div>
             </div>
