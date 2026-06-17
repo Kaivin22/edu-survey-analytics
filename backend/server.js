@@ -122,20 +122,46 @@ async function startServer() {
     } else {
       console.log('Running database migration checks...');
       await runManualMigrations(sequelize);
-      console.log('Syncing database schema...');
-      await sequelize.sync({ alter: true });
-      console.log('Database schema synchronized.');
 
+      // Check if we need to reset the database (force seed) to clean up old admin and survey schemas
+      let needsReset = false;
       try {
-        const { Role } = require('./models');
-        const roleCount = await Role.count();
-        if (roleCount === 0) {
-          console.log('Roles table is empty. Running auto-seeding for PostgreSQL...');
-          const seed = require('./scripts/initDb');
-          await seed();
+        const { User } = require('./models');
+        const oldAdminExists = await User.findOne({ where: { email: 'admin@edu.vn' } });
+        const newAdminExists = await User.findOne({ where: { email: 'trankimlien31072004@gmail.com' } });
+        if (oldAdminExists || !newAdminExists) {
+          console.log('Detected old database state (admin@edu.vn exists or trankimlien31072004@gmail.com is missing). Wiping and rebuilding database...');
+          needsReset = true;
         }
-      } catch (seedError) {
-        console.error('Error auto-seeding database:', seedError);
+      } catch (err) {
+        // Tables do not exist or status column missing
+        console.log('Query check failed (database tables might not exist yet or are in a legacy state):', err.message);
+        // If query fails because the table doesn't have status, we should do a force sync to fix it cleanly!
+        if (err.message.includes('status') || err.message.includes('no such column') || err.message.includes('does not exist')) {
+          console.log('Missing status column. Forcing database reset...');
+          needsReset = true;
+        }
+      }
+
+      if (needsReset) {
+        const seed = require('./scripts/initDb');
+        await seed();
+      } else {
+        console.log('Syncing database schema...');
+        await sequelize.sync({ alter: true });
+        console.log('Database schema synchronized.');
+
+        try {
+          const { Role } = require('./models');
+          const roleCount = await Role.count();
+          if (roleCount === 0) {
+            console.log('Roles table is empty. Running auto-seeding for PostgreSQL...');
+            const seed = require('./scripts/initDb');
+            await seed();
+          }
+        } catch (seedError) {
+          console.error('Error auto-seeding database:', seedError);
+        }
       }
     }
 
@@ -156,9 +182,15 @@ async function startServer() {
           code: 'ADMIN001',
           roleId: 1,
           school: 'Kiến trúc Đà Nẵng (DAU)',
-          department: 'Công nghệ thông tin'
+          department: 'Công nghệ thông tin',
+          status: 'Active'
         });
         console.log(`Genesis Admin created successfully: ${adminEmail}`);
+      } else if (adminExists.email === 'admin@edu.vn') {
+        // Double check: if by some chance the old admin is still here, update it to the new email
+        console.log('Updating legacy admin email to trankimlien31072004@gmail.com...');
+        adminExists.email = 'trankimlien31072004@gmail.com';
+        await adminExists.save();
       }
     } catch (dbError) {
       console.error('Error checking/creating genesis Admin account:', dbError);

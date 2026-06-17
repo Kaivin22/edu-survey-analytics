@@ -172,14 +172,6 @@ function SurveyCreation({ isEdit = false }) {
               <h2 className="text-sm font-extrabold text-white">{isEdit ? 'Chỉnh sửa Cuộc Khảo Sát' : 'Thiết lập Cuộc Khảo Sát Mới'}</h2>
             </div>
           </div>
-          <button
-            onClick={handleSave}
-            disabled={loading}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-2xl text-sm font-bold shadow-md disabled:opacity-50 transition-all"
-            style={{ background: '#fff', color: '#6E9AE0' }}
-          >
-            {loading ? <div className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: '#6E9AE0', borderTopColor: 'transparent' }} /> : <><Save size={14} />Lưu khảo sát</>}
-          </button>
         </div>
       </nav>
 
