@@ -53,18 +53,18 @@ function SurveyCreation({ isEdit = false, user }) {
         const res = await fetch(`${API_URL}/categories`);
         if (!res.ok) throw new Error('Failed to fetch categories');
         const data = await res.json();
-        
+
         const schoolsList = data.map(s => s.name);
         const deptsMap = {};
         const classesMap = {};
-        
+
         data.forEach(s => {
           deptsMap[s.name] = s.departments.map(d => d.name);
           s.departments.forEach(d => {
             classesMap[d.name] = d.classrooms.map(c => c.name);
           });
         });
-        
+
         setDynamicSchools(schoolsList);
         setDynamicDepartments(deptsMap);
         setDynamicClasses(classesMap);
@@ -200,8 +200,8 @@ function SurveyCreation({ isEdit = false, user }) {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
               {[
-                { label: 'Đối tượng mục tiêu', key: 'targetAudience', options: [['Student','Sinh viên'],['Lecturer','Giảng viên'],['Alumnus','Cựu sinh viên'],['Employer','Nhà tuyển dụng'],['All','Tất cả']] },
-                { label: 'Trạng thái', key: 'status', options: [['Draft','Bản nháp'],['Active','Kích hoạt'],['Closed','Đã đóng']] },
+                { label: 'Đối tượng mục tiêu', key: 'targetAudience', options: [['Student', 'Sinh viên'], ['Lecturer', 'Giảng viên'], ['Alumnus', 'Cựu sinh viên'], ['Employer', 'Nhà tuyển dụng'], ['All', 'Tất cả']] },
+                { label: 'Trạng thái', key: 'status', options: [['Draft', 'Bản nháp'], ['Active', 'Kích hoạt'], ['Closed', 'Đã đóng']] },
               ].map(({ label, key, options }) => (
                 <div key={key}>
                   <label className="block text-sm font-semibold mb-1 ml-1" style={{ color: '#2d4771' }}>{label}</label>
@@ -260,7 +260,7 @@ function SurveyCreation({ isEdit = false, user }) {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold mb-1 ml-1" style={{ color: '#2d4771' }}>Lớp mục tiêu <span className="text-xs font-normal" style={{ color: '#6E9AE0' }}>(giữ CTRL để chọn nhiều lớp)</span></label>
+                  <label className="block text-sm font-semibold mb-1 ml-1" style={{ color: '#2d4771' }}>Lớp mục tiêu</label>
                   <select
                     multiple
                     disabled={!form.department || form.targetAudience !== 'Student'}
