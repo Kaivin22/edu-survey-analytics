@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { LogOut, ClipboardList, Users, BarChart3, Plus, Trash2, Edit, FileSpreadsheet, Eye, CheckCircle, HelpCircle } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { LogOut, ClipboardList, Users, BarChart3, Plus, Trash2, Edit, FileSpreadsheet, Eye, CheckCircle, HelpCircle, User, Lock } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const TARGET_LABELS = { Student: 'Sinh viên', Lecturer: 'Giảng viên', Alumnus: 'Cựu sinh viên', Employer: 'Nhà tuyển dụng', All: 'Tất cả' };
 
-function AdminDashboard({ user, onLogout }) {
+function AdminDashboard({ user, onLogout, onUpdateUser }) {
   const [surveys, setSurveys] = useState([]);
   const [accounts, setAccounts] = useState([]);
   const [roles, setRoles] = useState([]);
@@ -77,13 +77,13 @@ function AdminDashboard({ user, onLogout }) {
   );
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#F9FAFD' }}>
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#F9FAFD', fontFamily: "'Outfit', 'Inter', sans-serif" }}>
 
       {/* Navbar */}
       <nav className="sticky top-0 z-30 shadow-sm" style={{ background: 'linear-gradient(135deg, #6E9AE0, #487bc9)' }}>
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center text-white"><BarChart3 size={20} /></div>
+            <Link to="/dashboard" className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center text-white text-decoration-none"><BarChart3 size={20} /></Link>
             <div>
               <span className="text-lg font-extrabold text-white tracking-tight">EDU SURVEY</span>
               <span className="ml-2 text-xs bg-white/20 text-white px-2 py-0.5 rounded-lg font-bold">
@@ -92,7 +92,12 @@ function AdminDashboard({ user, onLogout }) {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <span className="hidden md:block text-white text-sm font-semibold">{user.fullName}</span>
+            {/* Quay lại Trang chủ */}
+            <Link to="/" className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold bg-white/15 hover:bg-white/25 text-white transition-all text-decoration-none">
+              🏠 Trang chủ
+            </Link>
+
+            <span className="hidden md:block text-white text-sm font-semibold">Xin chào, {user.fullName}</span>
             <button onClick={onLogout} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-white/15 hover:bg-white/25 text-white transition-all">
               <LogOut size={15} /> Đăng xuất
             </button>
@@ -114,6 +119,7 @@ function AdminDashboard({ user, onLogout }) {
           {[
             { key: 'surveys', icon: ClipboardList, label: 'Quản lý phiếu khảo sát' },
             ...(user.role === 'Admin' ? [{ key: 'accounts', icon: Users, label: 'Quản lý phân quyền tài khoản' }] : []),
+            { key: 'profile', icon: User, label: 'Thông tin cá nhân' },
           ].map(({ key, icon: Icon, label }) => (
             <button
               key={key}
@@ -221,7 +227,7 @@ function AdminDashboard({ user, onLogout }) {
         )}
 
         {/* ── Tab: Accounts (Admin only) ── */}
-        {activeTab === 'accounts' && (
+        {activeTab === 'accounts' && user.role === 'Admin' && (
           <div className="space-y-5">
             <div>
               <h2 className="text-xl font-extrabold" style={{ color: '#2d4771' }}>Quản lý Phân Quyền Tài Khoản</h2>
@@ -273,7 +279,169 @@ function AdminDashboard({ user, onLogout }) {
           </div>
         )}
 
+        {/* ── Tab: Profile ── */}
+        {activeTab === 'profile' && (
+          <ProfileEditForm user={user} API_URL={API_URL} token={token} onUpdateUser={onUpdateUser} />
+        )}
+
       </main>
+    </div>
+  );
+}
+
+function ProfileEditForm({ user, API_URL, token, onUpdateUser }) {
+  const [form, setForm] = useState({
+    fullName: user.fullName || '',
+    code: user.code || '',
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const isDemo = ['admin@edu.vn', 'manager@edu.vn', 'student1@edu.vn', 'student2@edu.vn', 'lecturer1@edu.vn', 'alumnus1@edu.vn', 'employer1@edu.vn'].includes(user.email.toLowerCase());
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError(''); setSuccess('');
+    if (!form.fullName.trim()) { setError('Họ tên không được để trống.'); return; }
+    if (form.newPassword) {
+      if (!form.currentPassword) { setError('Vui lòng nhập mật khẩu hiện tại để đổi mật khẩu mới.'); return; }
+      if (form.newPassword.length < 8) { setError('Mật khẩu mới phải từ 8 ký tự trở lên.'); return; }
+      if (form.newPassword !== form.confirmPassword) { setError('Mật khẩu xác nhận không khớp.'); return; }
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/auth/profile`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          fullName: form.fullName.trim(),
+          code: form.code.trim(),
+          currentPassword: form.newPassword ? form.currentPassword : undefined,
+          newPassword: form.newPassword || undefined
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      setSuccess('Cập nhật thông tin cá nhân thành công!');
+      if (onUpdateUser) {
+        onUpdateUser(data.user);
+      }
+      setForm(prev => ({
+        ...prev,
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      }));
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const inputStyle = { background: '#F9FAFD', borderColor: '#D2DBEA', color: '#2d4771' };
+  const ROLE_LABELS = { Admin: 'Quản trị viên', Manager: 'Cán bộ quản lý', Student: 'Sinh viên', Lecturer: 'Giảng viên', Alumnus: 'Cựu sinh viên', Employer: 'Nhà tuyển dụng' };
+
+  return (
+    <div className="rounded-3xl shadow-sm p-8 border max-w-xl animate-fade-in" style={{ background: '#fff', borderColor: '#D2DBEA' }}>
+      <h2 className="text-xl font-extrabold mb-1" style={{ color: '#2d4771' }}>Thông Tin Cá Nhân</h2>
+      <p className="text-xs mb-6" style={{ color: '#6E9AE0' }}>Cập nhật thông tin tài khoản và đổi mật khẩu</p>
+
+      {error && <div className="mb-4 p-3 rounded-2xl text-sm border" style={{ background: '#fff5f5', borderColor: '#fecaca', color: '#dc2626' }}>{error}</div>}
+      {success && <div className="mb-4 p-3 rounded-2xl text-sm border" style={{ background: '#f0fdf4', borderColor: '#bbf7d0', color: '#16a34a' }}>{success}</div>}
+
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-semibold mb-1 ml-1" style={{ color: '#2d4771' }}>Địa chỉ Email</label>
+            <input
+              type="text" disabled value={user.email}
+              className="w-full px-4 py-2.5 rounded-2xl border text-sm font-medium opacity-60 cursor-not-allowed"
+              style={inputStyle}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold mb-1 ml-1" style={{ color: '#2d4771' }}>Vai trò hệ thống</label>
+            <input
+              type="text" disabled value={ROLE_LABELS[user.role] || user.role}
+              className="w-full px-4 py-2.5 rounded-2xl border text-sm font-medium opacity-60 cursor-not-allowed"
+              style={inputStyle}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-semibold mb-1 ml-1" style={{ color: '#2d4771' }}>Họ và Tên *</label>
+            <input
+              type="text" required placeholder="Nguyễn Văn A"
+              value={form.fullName} onChange={e => setForm(f => ({ ...f, fullName: e.target.value }))}
+              className="w-full px-4 py-2.5 rounded-2xl border text-sm font-medium outline-none"
+              style={inputStyle}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold mb-1 ml-1" style={{ color: '#2d4771' }}>Mã nhận diện (MSSV / MSGV / MST)</label>
+            <input
+              type="text" placeholder="Nhập mã số"
+              value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value }))}
+              className="w-full px-4 py-2.5 rounded-2xl border text-sm font-medium outline-none"
+              style={inputStyle}
+            />
+          </div>
+        </div>
+
+        <div style={{ borderTop: '1px solid #D2DBEA', paddingTop: '20px', marginTop: '20px' }}>
+          <h3 className="text-sm font-bold mb-3" style={{ color: '#2d4771' }}>Đổi Mật Khẩu (Để trống nếu không muốn đổi)</h3>
+          
+          {isDemo && (
+            <div className="mb-4 p-3 rounded-2xl text-xs" style={{ background: '#FFF8E6', color: '#92400e', border: '1px solid #FBECAC' }}>
+              ⚠️ Tài khoản demo hệ thống không hỗ trợ đổi mật khẩu để bảo đảm tính toàn vẹn dữ liệu.
+            </div>
+          )}
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-semibold mb-1 ml-1" style={{ color: '#2d4771' }}>Mật khẩu hiện tại</label>
+              <input
+                type="password" placeholder="••••••••" disabled={isDemo}
+                value={form.currentPassword} onChange={e => setForm(f => ({ ...f, currentPassword: e.target.value }))}
+                className="w-full px-4 py-2.5 rounded-2xl border text-sm font-medium outline-none disabled:opacity-50"
+                style={inputStyle}
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold mb-1 ml-1" style={{ color: '#2d4771' }}>Mật khẩu mới</label>
+                <input
+                  type="password" placeholder="••••••••" disabled={isDemo}
+                  value={form.newPassword} onChange={e => setForm(f => ({ ...f, newPassword: e.target.value }))}
+                  className="w-full px-4 py-2.5 rounded-2xl border text-sm font-medium outline-none disabled:opacity-50"
+                  style={inputStyle}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-1 ml-1" style={{ color: '#2d4771' }}>Xác nhận mật khẩu mới</label>
+                <input
+                  type="password" placeholder="••••••••" disabled={isDemo}
+                  value={form.confirmPassword} onChange={e => setForm(f => ({ ...f, confirmPassword: e.target.value }))}
+                  className="w-full px-4 py-2.5 rounded-2xl border text-sm font-medium outline-none disabled:opacity-50"
+                  style={inputStyle}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" disabled={loading} className="w-full py-3 text-white font-bold rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50" style={{ background: 'linear-gradient(135deg, #6E9AE0, #487bc9)', marginTop: '10px' }}>
+          {loading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : 'Lưu thay đổi'}
+        </button>
+      </form>
     </div>
   );
 }

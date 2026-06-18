@@ -69,11 +69,18 @@ export default function ForgotPassword() {
         style={{ position: 'fixed', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0 }}
         src={LOGIN_VIDEO}
       />
-      <div style={{ position: 'fixed', inset: 0, background: 'linear-gradient(135deg, rgba(0,43,110,0.78) 0%, rgba(110,154,224,0.60) 50%, rgba(0,67,174,0.75) 100%)', zIndex: 1 }} />
+
+      {/* Floating Home Button */}
+      <Link to="/" style={{ position: 'absolute', top: 24, left: 24, zIndex: 10, display: 'flex', alignItems: 'center', gap: 8, color: '#fff', textDecoration: 'none', fontWeight: 700, fontSize: 14, background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.25)', padding: '10px 18px', borderRadius: 12, backdropFilter: 'blur(8px)', transition: 'background 0.2s', boxShadow: '0 4px 12px rgba(0,0,0,0.25)' }}
+        onMouseOver={e => e.currentTarget.style.background = 'rgba(0,0,0,0.8)'}
+        onMouseOut={e => e.currentTarget.style.background = 'rgba(0,0,0,0.6)'}
+      >
+        ← Quay lại Trang chủ
+      </Link>
 
       {/* Card */}
       <div style={{ position: 'relative', zIndex: 2, width: '100%', maxWidth: 460, padding: '0 20px' }}>
-        <div style={{ background: 'rgba(255,255,255,0.97)', borderRadius: 24, padding: '40px 36px', boxShadow: '0 24px 64px rgba(0,0,0,0.25)' }}>
+        <div style={{ background: 'rgba(255,255,255,0.98)', borderRadius: 24, padding: '40px 36px', boxShadow: '0 24px 64px rgba(0,0,0,0.25)', border: '1px solid rgba(210,219,234,0.8)' }}>
 
           {/* Back link */}
           <Link to="/login" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#6E9AE0', textDecoration: 'none', fontSize: 14, fontWeight: 600, marginBottom: 24 }}>

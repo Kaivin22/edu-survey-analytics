@@ -35,6 +35,11 @@ function App() {
     setUser(null);
   };
 
+  const updateUser = (userData) => {
+    localStorage.setItem('user', JSON.stringify(userData));
+    setUser(userData);
+  };
+
   if (loading) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F9FAFD' }}>
@@ -51,7 +56,7 @@ function App() {
     <Router>
       <Routes>
         {/* ── Public Landing page (always accessible at /) ── */}
-        <Route path="/" element={<Landing />} />
+        <Route path="/" element={<Landing user={user} onLogout={logout} />} />
 
         {/* ── Auth pages ── */}
         <Route
@@ -73,9 +78,9 @@ function App() {
           element={
             user ? (
               ['Admin', 'Manager'].includes(user.role) ? (
-                <AdminDashboard user={user} onLogout={logout} />
+                <AdminDashboard user={user} onLogout={logout} onUpdateUser={updateUser} />
               ) : (
-                <Dashboard user={user} onLogout={logout} />
+                <Dashboard user={user} onLogout={logout} onUpdateUser={updateUser} />
               )
             ) : (
               <Navigate to="/login" replace />
