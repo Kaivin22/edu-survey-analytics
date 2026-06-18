@@ -29,6 +29,11 @@ async function seed() {
     ]);
     console.log('Roles seeded.');
 
+    if (process.env.NODE_ENV === 'production') {
+      console.log('Production mode detected. Skipping mock users, surveys and responses seeding.');
+      return;
+    }
+
     // 2. Seed Users
     console.log('Seeding Users...');
     const hashedPassword = await bcrypt.hash('12345678', 10);

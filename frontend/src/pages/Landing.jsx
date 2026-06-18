@@ -87,11 +87,11 @@ export default function Landing({ user, onLogout }) {
         transition: 'all 0.3s ease',
         borderBottom: scrolled ? '1px solid rgba(210,219,234,0.6)' : 'none'
       }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 2.5rem', height: 72, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ fontWeight: 800, fontSize: 22, color: scrolled ? '#6E9AE0' : '#fff', letterSpacing: -0.5 }}>
+        <div className="px-4 md:px-10" style={{ maxWidth: 1280, margin: '0 auto', height: 72, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div className="text-lg sm:text-xl md:text-2xl" style={{ fontWeight: 800, color: scrolled ? '#6E9AE0' : '#fff', letterSpacing: -0.5 }}>
             🎓 Academic Synergy
           </div>
-          <div style={{ display: 'flex', gap: 32, alignItems: 'center' }}>
+          <div className="hidden lg:flex" style={{ display: 'flex', gap: 32, alignItems: 'center' }}>
             {NAV_LINKS.map(link => (
               <a key={link.label} href={link.href} onClick={e => smoothScroll(e, link.href)}
                 style={{
@@ -104,18 +104,18 @@ export default function Landing({ user, onLogout }) {
               >{link.label}</a>
             ))}
           </div>
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <div className="flex gap-2 sm:gap-3 items-center">
             {user ? (
               <>
-                <span style={{ color: scrolled ? '#2d4771' : '#fff', fontWeight: 600, fontSize: 14, textShadow: scrolled ? 'none' : '0 1px 4px rgba(0,0,0,0.5)' }}>
+                <span className="hidden sm:inline" style={{ color: scrolled ? '#2d4771' : '#fff', fontWeight: 600, fontSize: 14, textShadow: scrolled ? 'none' : '0 1px 4px rgba(0,0,0,0.5)' }}>
                   Xin chào, {user.fullName}
                 </span>
                 <Link to="/dashboard"
-                  style={{ padding: '8px 20px', borderRadius: 999, background: '#6E9AE0', color: '#fff', textDecoration: 'none', fontWeight: 700, fontSize: 14, boxShadow: '0 4px 14px rgba(110,154,224,0.4)' }}>
-                  Vào Dashboard
+                  style={{ padding: '8px 16px', borderRadius: 999, background: '#6E9AE0', color: '#fff', textDecoration: 'none', fontWeight: 700, fontSize: 13, boxShadow: '0 4px 14px rgba(110,154,224,0.4)' }}>
+                  Dashboard
                 </Link>
                 <button onClick={onLogout}
-                  style={{ padding: '8px 16px', borderRadius: 999, border: `2px solid ${scrolled ? '#ef4444' : 'rgba(239,68,68,0.5)'}`, color: scrolled ? '#ef4444' : '#fff', background: 'transparent', cursor: 'pointer', fontWeight: 700, fontSize: 14, transition: 'all 0.2s' }}
+                  style={{ padding: '8px 14px', borderRadius: 999, border: `2px solid ${scrolled ? '#ef4444' : 'rgba(239,68,68,0.5)'}`, color: scrolled ? '#ef4444' : '#fff', background: 'transparent', cursor: 'pointer', fontWeight: 700, fontSize: 13, transition: 'all 0.2s' }}
                   onMouseOver={e => { e.currentTarget.style.background = '#ef4444'; e.currentTarget.style.color = '#fff'; }}
                   onMouseOut={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = scrolled ? '#ef4444' : '#fff'; }}
                 >
@@ -125,10 +125,10 @@ export default function Landing({ user, onLogout }) {
             ) : (
               <>
                 <Link to="/login"
-                  style={{ padding: '8px 20px', borderRadius: 999, border: `2px solid ${scrolled ? '#6E9AE0' : 'rgba(255,255,255,0.5)'}`, color: scrolled ? '#6E9AE0' : '#fff', textDecoration: 'none', fontWeight: 600, fontSize: 14, transition: 'all 0.2s' }}>
+                  style={{ padding: '8px 16px', borderRadius: 999, border: `2px solid ${scrolled ? '#6E9AE0' : 'rgba(255,255,255,0.5)'}`, color: scrolled ? '#6E9AE0' : '#fff', textDecoration: 'none', fontWeight: 600, fontSize: 13, transition: 'all 0.2s' }}>
                   Đăng nhập
                 </Link>
-                <Link to="/login"
+                <Link to="/login" className="hidden sm:inline-block"
                   style={{ padding: '8px 20px', borderRadius: 999, background: '#6E9AE0', color: '#fff', textDecoration: 'none', fontWeight: 700, fontSize: 14, boxShadow: '0 4px 14px rgba(110,154,224,0.4)' }}>
                   Tham gia khảo sát →
                 </Link>
@@ -183,7 +183,7 @@ export default function Landing({ user, onLogout }) {
 
       {/* ─── STATS SECTION ─── */}
       <section style={{ background: '#fff', padding: '48px 0', borderBottom: '1px solid #D2DBEA' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 2.5rem', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 24 }}>
+        <div className="stats-grid" style={{ maxWidth: 1280, margin: '0 auto', padding: '0 2.5rem', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 24 }}>
           {STATS.map(s => (
             <div key={s.label} style={{ textAlign: 'center', padding: '24px 16px' }}>
               <div style={{ fontSize: 42, fontWeight: 800, color: s.color, lineHeight: 1, marginBottom: 8 }}>{s.number}</div>
@@ -195,7 +195,7 @@ export default function Landing({ user, onLogout }) {
 
       {/* ─── ABOUT SECTION ─── */}
       <section id="about" style={{ padding: '100px 0', background: '#F9FAFD' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 2.5rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center' }}>
+        <div className="about-grid" style={{ maxWidth: 1280, margin: '0 auto', padding: '0 2.5rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center' }}>
           <div>
             <div style={{ display: 'inline-block', background: 'rgba(110,154,224,0.12)', color: '#6E9AE0', borderRadius: 999, padding: '6px 16px', fontSize: 13, fontWeight: 700, marginBottom: 20, textTransform: 'uppercase', letterSpacing: 0.5 }}>
               Về Chúng Tôi
@@ -211,7 +211,7 @@ export default function Landing({ user, onLogout }) {
               Hệ thống hỗ trợ 4 loại câu hỏi khảo sát linh hoạt (trắc nghiệm, thang điểm Likert, câu hỏi mở), theo dõi tiến trình phản hồi theo thời gian thực và xuất báo cáo chi tiết dạng Excel, Word và PDF.
             </p>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <div className="about-cards-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
             {[
               { icon: '📊', title: 'Dashboard thời gian thực', desc: 'Xem thống kê và phân tích phản hồi ngay lập tức.' },
               { icon: '🔒', title: 'Bảo mật dữ liệu', desc: 'JWT Authentication và phân quyền vai trò chặt chẽ.' },
@@ -243,7 +243,7 @@ export default function Landing({ user, onLogout }) {
               Mỗi cá nhân đều đóng góp một phần quan trọng vào sự thành công của hệ thống giáo dục.
             </p>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 24 }}>
+          <div className="stakeholders-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 24 }}>
             {STAKEHOLDERS.map(s => (
               <div key={s.title} style={{ background: '#F9FAFD', borderRadius: 20, padding: '32px 24px', border: '1px solid #D2DBEA', transition: 'all 0.3s ease', cursor: 'default' }}
                 onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-6px)'; e.currentTarget.style.boxShadow = `0 12px 30px ${s.color}25`; e.currentTarget.style.borderColor = s.color; }}
@@ -295,7 +295,7 @@ export default function Landing({ user, onLogout }) {
             <h2 style={{ fontSize: 38, fontWeight: 800, color: '#0d1c2f' }}>Kết Nối Với Chúng Tôi</h2>
             <p style={{ color: '#718096', fontSize: 16, marginTop: 12 }}>Có câu hỏi hoặc phản hồi? Chúng tôi luôn sẵn sàng lắng nghe.</p>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 48 }}>
+          <div className="contact-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 48 }}>
             <div>
               {[
                 { icon: '📍', label: 'Địa chỉ', value: 'Đại học Đà Nẵng, TP. Đà Nẵng' },
@@ -347,7 +347,7 @@ export default function Landing({ user, onLogout }) {
 
       {/* ─── FOOTER ─── */}
       <footer style={{ background: '#0d1c2f', color: '#fff', padding: '48px 0' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 2.5rem', display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: 48, alignItems: 'start' }}>
+        <div className="footer-grid" style={{ maxWidth: 1280, margin: '0 auto', padding: '0 2.5rem', display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: 48, alignItems: 'start' }}>
           <div>
             <div style={{ fontWeight: 800, fontSize: 20, color: '#6E9AE0', marginBottom: 12 }}>🎓 Academic Synergy</div>
             <p style={{ color: '#718096', fontSize: 14, lineHeight: 1.7, maxWidth: 300 }}>
@@ -378,10 +378,49 @@ export default function Landing({ user, onLogout }) {
         @keyframes bounce { 0%, 100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(-8px); } }
         @keyframes scroll-dot { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(14px); } }
         * { box-sizing: border-box; }
+        
+        @media (max-width: 768px) {
+          #hero h1 {
+            font-size: 32px !important;
+          }
+          #hero p {
+            font-size: 15px !important;
+            margin-bottom: 24px !important;
+          }
+        }
+
         @media (max-width: 1024px) {
-          section > div > div[style*="grid-template-columns: repeat(4"] { grid-template-columns: repeat(2, 1fr) !important; }
-          section > div > div[style*="grid-template-columns: 1fr 1fr"] { grid-template-columns: 1fr !important; }
-          section > div > div[style*="grid-template-columns: 1fr auto"] { grid-template-columns: 1fr !important; }
+          .about-grid {
+            grid-template-columns: 1fr !important;
+            gap: 40px !important;
+          }
+          .stakeholders-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+          }
+        }
+
+        @media (max-width: 768px) {
+          .stats-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 16px !important;
+            padding: 0 1.5rem !important;
+          }
+          .contact-grid, .footer-grid {
+            grid-template-columns: 1fr !important;
+            gap: 32px !important;
+          }
+        }
+
+        @media (max-width: 640px) {
+          .stakeholders-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .stats-grid, .about-cards-grid {
+            grid-template-columns: 1fr !important;
+          }
         }
       `}</style>
     </div>
