@@ -1,5 +1,4 @@
-# Phan mem Khao sat Lay y kien Cac ben Lien quan Trong Giao duc (Topic 2)
-
+# Phan mem Khao sat Lay y kien Cac ben Lien quan Trong Giao duc
 Du an duoc xay dung dua tren tai lieu mo ta chuc nang cua SDC, phuc vu kiem dinh chat luong giao duc theo chuan AUN-QA va ABET. He thong ho tro da doi tuong su dung bao gom Sinh vien, Giang vien, Cuu sinh vien, Nha tuyen dung, Can bo quan ly va Admin.
 
 He thong duoc thiet ke theo phong cach Premium Glassmorphism hien dai, responsive hoan hao va ho tro truc quan hoa du lieu qua bieu do cung tinh nang xuat bao cao chuyen nghiep.
@@ -109,11 +108,13 @@ JWT_SECRET=your-jwt-secret
 FRONTEND_URL=http://localhost:3000
 
 # SMTP de gui mail OTP thuc (Thay doi thong tin thuc cua ban)
+# Luu y ve SMTP_PASS: Phai su dung Mat khau ung dung (App Password) cua Google. Hay viet lien 16 ky tu chu thuong, xoa toan bo khoang trang de Nodemailer nhan dien dung (vi du: abcdefghijklmnop).
+# Luu y ve SMTP_PORT: Tren moi truong production (Render), hay dung cong 465 (voi secure = true) thay vi cong 587, vi cac nha cung cap cloud nhu Render se chan cong 587 de phong ngua spam.
 SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your-email@gmail.com
-SMTP_PASS=your-app-password
-SMTP_FROM=your-email@gmail.com
+SMTP_PORT=465
+SMTP_USER=email-gui-mail-cua-ban@gmail.com
+SMTP_PASS=abcdefghijklmnop
+SMTP_FROM=Academic Synergy <email-gui-mail-cua-ban@gmail.com>
 ```
 
 ### Frontend (frontend/.env)
