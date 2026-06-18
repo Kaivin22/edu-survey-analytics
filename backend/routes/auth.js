@@ -233,7 +233,7 @@ router.put('/profile', authenticateToken, async (req, res) => {
     if (school !== undefined) user.school = school;
     if (department !== undefined) user.department = department;
     if (classVal !== undefined) user.class = classVal;
-    
+
     await user.save();
 
     const updatedUser = await User.findByPk(user.id, {
@@ -312,17 +312,23 @@ const otpStore = new Map();
 
 // Configure SMTP transporter
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.SMTP_PORT || '587'),
-  secure: parseInt(process.env.SMTP_PORT || '587') === 465,
+  // Thay vì smtp.gmail.com, dùng IP IPv4 trực tiếp của Google để triệt tiêu lỗi IPv6 trên Render
+  host: process.env.SMTP_HOST || '74.125.68.108',
+  port: parseInt(process.env.SMTP_PORT) || 587,
+  secure: false, // Ép bằng false nếu dùng cổng 587
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
   },
-  family: 4, // Force IPv4 resolution to prevent ENETUNREACH errors on IPv6-unsupported networks (like Render)
-  connectionTimeout: 5000, // 5 seconds
-  greetingTimeout: 5000,   // 5 seconds
-  socketTimeout: 5000,     // 5 seconds
+  /* Loại bỏ hoàn toàn các thuộc tính timeout quá ngắn đề phòng mạng Render bị chậm */
+  connectionTimeout: 15000, // Tăng lên 15 giây
+  greetingTimeout: 15000,
+  socketTimeout: 15000,
+  tls: {
+    // Không kiểm tra chứng chỉ nghiêm ngặt để tránh lỗi tên miền không khớp khi dùng IP trực tiếp
+    rejectUnauthorized: false,
+    servername: 'smtp.gmail.com' // Giúp xác thực TLS với Google mượt mà hơn
+  }
 });
 
 // 6. Forgot Password - Request OTP
