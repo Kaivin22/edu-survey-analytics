@@ -196,6 +196,36 @@ async function startServer() {
       console.error('Error checking/creating genesis Admin account:', dbError);
     }
 
+    // Auto-close expired surveys on startup and periodically (every 5 minutes)
+    const autoCloseExpiredSurveys = async () => {
+      try {
+        const { Survey } = require('./models');
+        const { Op } = require('sequelize');
+        const count = await Survey.update(
+          { status: 'Closed' },
+          {
+            where: {
+              status: 'Active',
+              endDate: {
+                [Op.ne]: null,
+                [Op.lt]: new Date()
+              }
+            }
+          }
+        );
+        if (count[0] > 0) {
+          console.log(`[Auto-Close] Closed ${count[0]} expired surveys.`);
+        }
+      } catch (err) {
+        console.error('[Auto-Close Error] Failed to auto-close expired surveys:', err.message);
+      }
+    };
+
+    // Run immediately
+    await autoCloseExpiredSurveys();
+    // Run every 5 minutes
+    setInterval(autoCloseExpiredSurveys, 5 * 60 * 1000);
+
     app.listen(PORT, () => {
       console.log(`==================================================`);
       console.log(`Backend Server is running on port ${PORT}`);

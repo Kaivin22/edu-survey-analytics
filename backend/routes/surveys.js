@@ -18,10 +18,24 @@ const { authenticateToken, authorizeRoles } = require('../middleware/auth');
 // - Other roles get active surveys corresponding to their targetAudience that they haven't submitted yet.
 router.get('/', authenticateToken, async (req, res) => {
   try {
+    const { Op } = require('sequelize');
+    // Auto-close expired surveys
+    await Survey.update(
+      { status: 'Closed' },
+      {
+        where: {
+          status: 'Active',
+          endDate: {
+            [Op.ne]: null,
+            [Op.lt]: new Date()
+          }
+        }
+      }
+    );
+
     const userRole = req.user.role;
     const userId = req.user.id;
     const { createdOnly } = req.query;
-    const { Op } = require('sequelize');
 
     if (createdOnly === 'true' || userRole === 'Admin' || userRole === 'Manager') {
       const whereClause = {};
@@ -124,6 +138,21 @@ router.get('/', authenticateToken, async (req, res) => {
 // 2. Get Survey Detail with Questions & Options
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
+    const { Op } = require('sequelize');
+    // Auto-close expired surveys
+    await Survey.update(
+      { status: 'Closed' },
+      {
+        where: {
+          status: 'Active',
+          endDate: {
+            [Op.ne]: null,
+            [Op.lt]: new Date()
+          }
+        }
+      }
+    );
+
     const survey = await Survey.findByPk(req.params.id, {
       include: [
         {
@@ -172,8 +201,8 @@ router.get('/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// 3. Create Survey (Admin, Manager, Lecturer, Employer)
-router.post('/', authenticateToken, authorizeRoles(['Admin', 'Manager', 'Lecturer', 'Employer']), async (req, res) => {
+// 3. Create Survey (Admin, Manager)
+router.post('/', authenticateToken, authorizeRoles(['Admin', 'Manager']), async (req, res) => {
   const transaction = await sequelize.transaction();
   try {
     const { title, description, targetAudience, status, startDate, endDate, questions, school, department, class: classVal } = req.body;
@@ -235,8 +264,8 @@ router.post('/', authenticateToken, authorizeRoles(['Admin', 'Manager', 'Lecture
   }
 });
 
-// 4. Update Survey (Admin, Manager, Lecturer, Employer)
-router.put('/:id', authenticateToken, authorizeRoles(['Admin', 'Manager', 'Lecturer', 'Employer']), async (req, res) => {
+// 4. Update Survey (Admin, Manager)
+router.put('/:id', authenticateToken, authorizeRoles(['Admin', 'Manager']), async (req, res) => {
   const transaction = await sequelize.transaction();
   try {
     const { title, description, targetAudience, status, startDate, endDate, questions, school, department, class: classVal } = req.body;
@@ -245,11 +274,6 @@ router.put('/:id', authenticateToken, authorizeRoles(['Admin', 'Manager', 'Lectu
     const survey = await Survey.findByPk(surveyId);
     if (!survey) {
       return res.status(404).json({ message: 'Không tìm thấy khảo sát để chỉnh sửa.' });
-    }
-
-    // Check ownership for non-admin/manager roles
-    if (['Lecturer', 'Employer'].includes(req.user.role) && survey.createdBy !== req.user.id) {
-      return res.status(403).json({ message: 'Bạn không có quyền chỉnh sửa khảo sát này.' });
     }
 
     let finalSchool = school || null;
@@ -313,17 +337,12 @@ router.put('/:id', authenticateToken, authorizeRoles(['Admin', 'Manager', 'Lectu
   }
 });
 
-// 5. Delete Survey (Admin, Manager, Lecturer, Employer)
-router.delete('/:id', authenticateToken, authorizeRoles(['Admin', 'Manager', 'Lecturer', 'Employer']), async (req, res) => {
+// 5. Delete Survey (Admin, Manager)
+router.delete('/:id', authenticateToken, authorizeRoles(['Admin', 'Manager']), async (req, res) => {
   try {
     const survey = await Survey.findByPk(req.params.id);
     if (!survey) {
       return res.status(404).json({ message: 'Không tìm thấy cuộc khảo sát cần xóa.' });
-    }
-
-    // Check ownership for non-admin/manager roles
-    if (['Lecturer', 'Employer'].includes(req.user.role) && survey.createdBy !== req.user.id) {
-      return res.status(403).json({ message: 'Bạn không có quyền xóa khảo sát này.' });
     }
 
     if (req.user.role === 'Manager') {
@@ -410,9 +429,24 @@ router.post('/:id/submit', authenticateToken, async (req, res) => {
   }
 });
 
-// 7. Get Survey Statistical Data (Admin, Manager, Lecturer, Employer)
-router.get('/:id/stats', authenticateToken, authorizeRoles(['Admin', 'Manager', 'Lecturer', 'Employer']), async (req, res) => {
+// 7. Get Survey Statistical Data (Admin, Manager)
+router.get('/:id/stats', authenticateToken, authorizeRoles(['Admin', 'Manager']), async (req, res) => {
   try {
+    const { Op } = require('sequelize');
+    // Auto-close expired surveys
+    await Survey.update(
+      { status: 'Closed' },
+      {
+        where: {
+          status: 'Active',
+          endDate: {
+            [Op.ne]: null,
+            [Op.lt]: new Date()
+          }
+        }
+      }
+    );
+
     const surveyId = req.params.id;
     const { school, department, class: classVal } = req.query;
 
@@ -428,11 +462,6 @@ router.get('/:id/stats', authenticateToken, authorizeRoles(['Admin', 'Manager', 
 
     if (!survey) {
       return res.status(404).json({ message: 'Không tìm thấy cuộc khảo sát.' });
-    }
-
-    // Check ownership for non-admin/manager roles
-    if (['Lecturer', 'Employer'].includes(req.user.role) && survey.createdBy !== req.user.id) {
-      return res.status(403).json({ message: 'Bạn không có quyền xem thống kê khảo sát này.' });
     }
 
     // Manager can only view stats for surveys in their school
@@ -464,7 +493,6 @@ router.get('/:id/stats', authenticateToken, authorizeRoles(['Admin', 'Manager', 
     const totalResponses = responseIds.length;
 
     // Calculate totalAssigned: count users matching survey criteria
-    const { Op } = require('sequelize');
     const assignedWhere = {};
     assignedWhere.status = 'Active';
 

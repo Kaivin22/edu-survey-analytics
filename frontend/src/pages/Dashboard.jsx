@@ -26,7 +26,7 @@ function Dashboard({ user, onLogout, onUpdateUser }) {
   useEffect(() => {
     fetchSurveys();
     fetchNotifications();
-    if (['Admin', 'Manager', 'Lecturer', 'Employer'].includes(user.role)) {
+    if (['Admin', 'Manager'].includes(user.role)) {
       fetchCreatedSurveys();
     }
   }, []);
@@ -208,7 +208,7 @@ function Dashboard({ user, onLogout, onUpdateUser }) {
                 key: 'created-surveys',
                 icon: FileText,
                 label: 'Khảo sát đã tạo',
-                visible: ['Admin', 'Manager', 'Lecturer', 'Employer'].includes(user.role)
+                visible: ['Admin', 'Manager'].includes(user.role)
               },
               { key: 'profile', icon: User, label: 'Thông tin cá nhân' },
             ]
