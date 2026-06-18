@@ -22,12 +22,12 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=http://localhost:5000/api
     image: edu-survey-frontend:latest
     container_name: edu_survey_frontend
     ports:
       - "3000:3000"
-    environment:
-      - VITE_API_URL=http://localhost:5000/api
     depends_on:
       - backend
     restart: always
