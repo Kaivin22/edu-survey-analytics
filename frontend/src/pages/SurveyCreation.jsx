@@ -68,7 +68,7 @@ function SurveyCreation({ isEdit = false }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
       setSuccess(isEdit ? 'Cập nhật thành công!' : 'Tạo khảo sát thành công!');
-      setTimeout(() => navigate('/'), 1500);
+      setTimeout(() => navigate('/dashboard'), 1500);
     } catch (e) { setError(e.message); } finally { setLoading(false); }
   };
 
@@ -81,7 +81,7 @@ function SurveyCreation({ isEdit = false }) {
       <nav className="sticky top-0 z-30 shadow-sm" style={{ background: 'linear-gradient(135deg, #6E9AE0, #487bc9)' }}>
         <div className="max-w-4xl mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <button onClick={() => navigate('/')} className="p-2 bg-white/20 hover:bg-white/30 rounded-xl text-white transition-all">
+            <button onClick={() => navigate('/dashboard')} className="p-2 bg-white/20 hover:bg-white/30 rounded-xl text-white transition-all">
               <ArrowLeft size={16} />
             </button>
             <div>
@@ -219,7 +219,7 @@ function SurveyCreation({ isEdit = false }) {
 
         {/* Bottom actions */}
         <div className="flex justify-end gap-4 pt-2">
-          <button onClick={() => navigate('/')} className="px-6 py-2.5 rounded-2xl text-sm font-bold border transition-all" style={{ background: '#fff', borderColor: '#D2DBEA', color: '#487bc9' }}>Hủy</button>
+          <button onClick={() => navigate('/dashboard')} className="px-6 py-2.5 rounded-2xl text-sm font-bold border transition-all" style={{ background: '#fff', borderColor: '#D2DBEA', color: '#487bc9' }}>Hủy</button>
           <button onClick={handleSave} disabled={loading} className="px-6 py-2.5 text-white font-bold rounded-2xl shadow-md transition-all disabled:opacity-50 text-sm" style={{ background: 'linear-gradient(135deg, #6E9AE0, #487bc9)' }}>Lưu khảo sát</button>
         </div>
       </main>

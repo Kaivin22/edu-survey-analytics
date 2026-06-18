@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
 import Dashboard from './pages/Dashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import SurveyTaking from './pages/SurveyTaking';
@@ -13,10 +15,8 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if token exists in localStorage
     const savedUser = localStorage.getItem('user');
     const token = localStorage.getItem('token');
-    
     if (savedUser && token) {
       setUser(JSON.parse(savedUser));
     }
@@ -37,94 +37,95 @@ function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">
-        <div className="flex flex-col items-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-500"></div>
-          <p className="mt-4 text-slate-400 font-medium">Đang tải hệ thống...</p>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F9FAFD' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+          <div style={{ width: 48, height: 48, borderRadius: '50%', border: '3px solid #D2DBEA', borderTopColor: '#6E9AE0', animation: 'spin 0.8s linear infinite' }} />
+          <p style={{ color: '#6E9AE0', fontWeight: 600, fontFamily: "'Outfit', sans-serif" }}>Đang tải hệ thống...</p>
         </div>
+        <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
 
   return (
     <Router>
-      <div className="relative min-h-screen overflow-x-hidden">
-        {/* Background Mesh Gradients */}
-        <div className="bg-mesh"></div>
+      <Routes>
+        {/* ── Public Landing page (always accessible at /) ── */}
+        <Route path="/" element={<Landing />} />
 
-        <Routes>
-          {/* Public Routes */}
-          <Route 
-            path="/login" 
-            element={user ? <Navigate to="/" replace /> : <Login onLogin={login} />} 
-          />
-          <Route 
-            path="/register" 
-            element={user ? <Navigate to="/" replace /> : <Register />} 
-          />
+        {/* ── Auth pages ── */}
+        <Route
+          path="/login"
+          element={user ? <Navigate to="/dashboard" replace /> : <Login onLogin={login} />}
+        />
+        <Route
+          path="/register"
+          element={user ? <Navigate to="/dashboard" replace /> : <Register />}
+        />
+        <Route
+          path="/forgot-password"
+          element={user ? <Navigate to="/dashboard" replace /> : <ForgotPassword />}
+        />
 
-          {/* Protected Main Landing Route */}
-          <Route 
-            path="/" 
-            element={
-              user ? (
-                ['Admin', 'Manager'].includes(user.role) ? (
-                  <AdminDashboard user={user} onLogout={logout} />
-                ) : (
-                  <Dashboard user={user} onLogout={logout} />
-                )
+        {/* ── Protected Dashboard (redirect here after login) ── */}
+        <Route
+          path="/dashboard"
+          element={
+            user ? (
+              ['Admin', 'Manager'].includes(user.role) ? (
+                <AdminDashboard user={user} onLogout={logout} />
               ) : (
-                <Navigate to="/login" replace />
+                <Dashboard user={user} onLogout={logout} />
               )
-            } 
-          />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
 
-          {/* User Survey taking */}
-          <Route 
-            path="/survey/:id" 
-            element={
-              user ? <SurveyTaking user={user} onLogout={logout} /> : <Navigate to="/login" replace />
-            } 
-          />
+        {/* ── Survey taking ── */}
+        <Route
+          path="/survey/:id"
+          element={user ? <SurveyTaking user={user} onLogout={logout} /> : <Navigate to="/login" replace />}
+        />
 
-          {/* Admin Stats & Chart Details */}
-          <Route 
-            path="/survey/:id/stats" 
-            element={
-              user && ['Admin', 'Manager'].includes(user.role) ? (
-                <SurveyStats user={user} onLogout={logout} />
-              ) : (
-                <Navigate to="/" replace />
-              )
-            } 
-          />
+        {/* ── Survey stats (Admin/Manager only) ── */}
+        <Route
+          path="/survey/:id/stats"
+          element={
+            user && ['Admin', 'Manager'].includes(user.role) ? (
+              <SurveyStats user={user} onLogout={logout} />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
 
-          {/* Admin Create & Edit Survey */}
-          <Route 
-            path="/survey/create" 
-            element={
-              user && user.role === 'Admin' ? (
-                <SurveyCreation user={user} onLogout={logout} />
-              ) : (
-                <Navigate to="/" replace />
-              )
-            } 
-          />
-          <Route 
-            path="/survey/edit/:id" 
-            element={
-              user && user.role === 'Admin' ? (
-                <SurveyCreation user={user} onLogout={logout} isEdit={true} />
-              ) : (
-                <Navigate to="/" replace />
-              )
-            } 
-          />
+        {/* ── Survey creation/editing (Admin only) ── */}
+        <Route
+          path="/survey/create"
+          element={
+            user && user.role === 'Admin' ? (
+              <SurveyCreation user={user} onLogout={logout} />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route
+          path="/survey/edit/:id"
+          element={
+            user && user.role === 'Admin' ? (
+              <SurveyCreation user={user} onLogout={logout} isEdit={true} />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
 
-          {/* Catch-all Redirect */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </div>
+        {/* ── Catch-all: redirect to landing ── */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     </Router>
   );
 }

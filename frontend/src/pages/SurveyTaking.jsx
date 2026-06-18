@@ -79,7 +79,7 @@ function SurveyTaking({ user }) {
       if (!res.ok) throw new Error(data.message);
       localStorage.removeItem(`autosave_${id}_${user.id}`);
       alert('Nộp khảo sát thành công! Cảm ơn ý kiến của bạn.');
-      navigate('/');
+      navigate('/dashboard');
     } catch (e) { setError(e.message); } finally { setSubmitting(false); }
   };
 
@@ -97,7 +97,7 @@ function SurveyTaking({ user }) {
       <div className="p-8 rounded-3xl text-center shadow-sm max-w-sm border" style={{ background: '#fff', borderColor: '#D2DBEA' }}>
         <AlertTriangle size={40} className="mx-auto mb-4" style={{ color: '#dc2626' }} />
         <p className="font-bold mb-4" style={{ color: '#2d4771' }}>{error}</p>
-        <button onClick={() => navigate('/')} className="px-6 py-2.5 text-white font-bold rounded-2xl" style={{ background: '#6E9AE0' }}>Quay về</button>
+        <button onClick={() => navigate('/dashboard')} className="px-6 py-2.5 text-white font-bold rounded-2xl" style={{ background: '#6E9AE0' }}>Quay về</button>
       </div>
     </div>
   );
@@ -109,7 +109,7 @@ function SurveyTaking({ user }) {
       <nav className="sticky top-0 z-30 shadow-sm" style={{ background: 'linear-gradient(135deg, #6E9AE0, #487bc9)' }}>
         <div className="max-w-4xl mx-auto px-6 py-3 flex flex-col sm:flex-row sm:items-center gap-3">
           <div className="flex items-center gap-3 flex-1">
-            <button onClick={() => navigate('/')} className="p-2 bg-white/20 hover:bg-white/30 rounded-xl text-white transition-all">
+            <button onClick={() => navigate('/dashboard')} className="p-2 bg-white/20 hover:bg-white/30 rounded-xl text-white transition-all">
               <ArrowLeft size={16} />
             </button>
             <div>
@@ -260,7 +260,7 @@ function SurveyTaking({ user }) {
 
         {/* Action buttons */}
         <div className="flex justify-end gap-4 pt-4">
-          <button onClick={() => navigate('/')} className="px-5 py-3 border rounded-2xl text-sm font-bold transition-all flex items-center gap-2" style={{ background: '#fff', borderColor: '#D2DBEA', color: '#487bc9' }}>
+          <button onClick={() => navigate('/dashboard')} className="px-5 py-3 border rounded-2xl text-sm font-bold transition-all flex items-center gap-2" style={{ background: '#fff', borderColor: '#D2DBEA', color: '#487bc9' }}>
             <Save size={16} />Lưu nháp & thoát
           </button>
           <button
