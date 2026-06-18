@@ -371,35 +371,8 @@ router.post('/forgot-password', async (req, res) => {
       `
     };
 
-    const isDummySmtp = !process.env.SMTP_USER || 
-                        process.env.SMTP_USER === 'your-email@gmail.com' || 
-                        process.env.SMTP_USER.trim() === '' || 
-                        !process.env.SMTP_PASS || 
-                        process.env.SMTP_PASS === 'your-app-password';
-
-    let emailSent = false;
-    let emailError = null;
-
-    if (!isDummySmtp) {
-      try {
-        await transporter.sendMail(mailOptions);
-        emailSent = true;
-      } catch (err) {
-        console.error('Lỗi gửi email OTP thực tế:', err);
-        emailError = err.message;
-      }
-    } else {
-      console.log(`[DEMO/DEV] SMTP chưa được cấu hình hoặc là mặc định. Mã OTP khôi phục mật khẩu cho ${email} là: ${otp}`);
-    }
-
-    if (emailSent) {
-      res.json({ message: 'Mã xác minh OTP đã được gửi tới email của bạn. Vui lòng kiểm tra hộp thư!' });
-    } else {
-      res.json({
-        message: `Hệ thống chưa cấu hình SMTP gửi mail thực tế hoặc gửi thất bại (${emailError || 'Chưa cấu hình'}). Mã OTP thử nghiệm của bạn là: ${otp}`,
-        otp: otp
-      });
-    }
+    await transporter.sendMail(mailOptions);
+    res.json({ message: 'Mã xác minh OTP đã được gửi tới email của bạn. Vui lòng kiểm tra hộp thư!' });
 
   } catch (error) {
     console.error('Lỗi gửi email OTP:', error);
