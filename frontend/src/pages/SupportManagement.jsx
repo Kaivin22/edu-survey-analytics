@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, MessageSquare, Clock, CheckCircle, AlertCircle, HelpCircle, Send, User, Trash2 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-const ROLE_LABELS = { Student: 'Sinh viên', Lecturer: 'Giảng viên', Alumnus: 'Cựu sinh viên', Employer: 'Nhà tuyển dụng', Manager: 'Cán bộ quản lý' };
+const ROLE_LABELS = { Admin: 'Quản trị viên', Manager: 'Cán bộ quản lý', Student: 'Sinh viên', Lecturer: 'Giảng viên', Alumnus: 'Cựu sinh viên', Employer: 'Nhà tuyển dụng' };
 
 const STATUS_OPTIONS = [
   { id: 'all', label: 'Tất cả' },
@@ -271,7 +271,7 @@ function SupportManagement({ user, onLogout }) {
                   {/* Answer / Action section */}
                   {t.reply && !isReplying && (
                     <div className="p-3.5 rounded-xl border border-emerald-100 bg-emerald-50/50 space-y-1">
-                      <p className="text-[10px] font-bold text-emerald-800 uppercase tracking-wide">Phản hồi từ Cán bộ quản lý:</p>
+                      <p className="text-[10px] font-bold text-emerald-800 uppercase tracking-wide">Phản hồi từ Quản trị viên:</p>
                       <p className="text-xs text-slate-700 font-semibold leading-relaxed">
                         {t.reply}
                       </p>

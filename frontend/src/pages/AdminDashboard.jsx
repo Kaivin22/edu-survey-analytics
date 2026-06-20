@@ -5,7 +5,7 @@ import { LogOut, ClipboardList, Users, BarChart3, Plus, Trash2, Edit, FileSpread
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const TARGET_LABELS = { Student: 'Sinh viên', Lecturer: 'Giảng viên', Alumnus: 'Cựu sinh viên', Employer: 'Nhà tuyển dụng', All: 'Tất cả' };
-const ROLE_LABELS = { Admin: 'Cán bộ quản lý', Manager: 'Cán bộ quản lý', Student: 'Sinh viên', Lecturer: 'Giảng viên', Alumnus: 'Cựu sinh viên', Employer: 'Nhà tuyển dụng' };
+const ROLE_LABELS = { Admin: 'Quản trị viên', Manager: 'Cán bộ quản lý', Student: 'Sinh viên', Lecturer: 'Giảng viên', Alumnus: 'Cựu sinh viên', Employer: 'Nhà tuyển dụng' };
 
 const SCHOOLS = [];
 const DEPARTMENTS = {};
@@ -16,11 +16,10 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
   const [accounts, setAccounts] = useState([]);
   const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('surveys');
+  const [activeTab, setActiveTab] = useState(user.role === 'Admin' ? 'accounts' : 'surveys');
   const [stats, setStats] = useState({ total: 0, active: 0, users: 0 });
   const [userFilters, setUserFilters] = useState({ 
     role: '', 
-    school: user.school, 
     department: '', 
     class: '' 
   });
@@ -80,12 +79,9 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
       setDynamicDepartments(deptsMap);
       setDynamicClasses(classesMap);
 
-      // Auto-select manager's school
-      if (user.role === 'Manager' && user.school) {
-        const matchingSchool = data.find(s => s.name === user.school);
-        if (matchingSchool) {
-          setSelectedSchoolId(matchingSchool.id);
-        }
+      // Auto-select first school in single-school setup
+      if (data.length > 0) {
+        setSelectedSchoolId(data[0].id);
       }
     } catch (err) {
       console.error('Error fetching categories in AdminDashboard:', err);
@@ -97,7 +93,6 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
       const userRoleName = acc.role?.name || acc.role || '';
       if (userRoleName !== userFilters.role) return false;
     }
-    if (userFilters.school && acc.school !== userFilters.school) return false;
     if (userFilters.department && acc.department !== userFilters.department) return false;
     if (userFilters.class && (!acc.class || !acc.class.toLowerCase().includes(userFilters.class.toLowerCase()))) return false;
     return true;
@@ -108,7 +103,7 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
   useEffect(() => {
     fetchSurveys();
     fetchCategoriesTree();
-    if (user.role === 'Manager') {
+    if (['Admin', 'Manager'].includes(user.role)) {
       fetchAccounts();
       fetchRoles();
     }
@@ -249,7 +244,7 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
       fullName: '',
       code: '',
       roleId: roles.length > 0 ? (roles.find(r => r.name === 'Student')?.id || roles.filter(r => !(r.name === 'Admin' || r.id === 1))[0]?.id) : '',
-      school: user.school,
+      school: user.school || 'Trường Đại học Kiến trúc Đà Nẵng',
       department: '',
       class: ''
     });
@@ -267,7 +262,7 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
       fullName: acc.fullName || '',
       code: acc.code || '',
       roleId: acc.roleId || '',
-      school: user.school,
+      school: acc.school || user.school || 'Trường Đại học Kiến trúc Đà Nẵng',
       department: acc.department || '',
       class: acc.class || ''
     });
@@ -369,7 +364,7 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
             <div>
               <Link to="/" style={{ textDecoration: 'none' }} className="text-lg font-extrabold text-white tracking-tight">ĐBCL - Đại học Kiến trúc Đà Nẵng</Link>
               <span className="ml-2 text-xs bg-white/20 text-white px-2 py-0.5 rounded-lg font-bold">
-                Cán bộ quản lý
+                {user.role === 'Admin' ? 'Quản trị viên' : 'Cán bộ quản lý'}
               </span>
             </div>
           </div>
@@ -386,18 +381,32 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
 
         {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-          <StatCard icon={ClipboardList} label="Tổng số khảo sát" value={stats.total} bg="#EEF4FD" iconColor="#6E9AE0" />
-          <StatCard icon={CheckCircle} label="Khảo sát đang chạy" value={stats.active} bg="#F0FDF4" iconColor="#16a34a" />
-          <StatCard icon={Users} label="Tổng số tài khoản" value={user.role === 'Manager' ? stats.users : '—'} bg="#FFFBEB" iconColor="#D97706" />
+          {user.role === 'Manager' ? (
+            <>
+              <StatCard icon={ClipboardList} label="Tổng số khảo sát" value={stats.total} bg="#EEF4FD" iconColor="#6E9AE0" />
+              <StatCard icon={CheckCircle} label="Khảo sát đang chạy" value={stats.active} bg="#F0FDF4" iconColor="#16a34a" />
+              <StatCard icon={Users} label="Nhà tuyển dụng chờ duyệt" value={accounts.filter(a => a.status === 'Pending').length} bg="#FFFBEB" iconColor="#D97706" />
+            </>
+          ) : (
+            <>
+              <StatCard icon={Users} label="Tổng số tài khoản" value={stats.users} bg="#EEF4FD" iconColor="#6E9AE0" />
+              <StatCard icon={CheckCircle} label="Tài khoản chờ duyệt" value={accounts.filter(a => a.status === 'Pending').length} bg="#F0FDF4" iconColor="#16a34a" />
+              <StatCard icon={School} label="Số khoa đào tạo" value={dynamicSchools.length > 0 ? (dynamicDepartments[dynamicSchools[0]]?.length || 0) : 0} bg="#FFFBEB" iconColor="#D97706" />
+            </>
+          )}
         </div>
 
         {/* Tabs */}
         <div className="flex gap-3 flex-wrap" style={{ borderBottom: '2px solid #D2DBEA', paddingBottom: '1px' }}>
           {[
-            { key: 'surveys', icon: ClipboardList, label: 'Quản lý phiếu khảo sát' },
-            ...(user.role === 'Manager' ? [{ key: 'accounts', icon: Users, label: 'Quản lý phân quyền tài khoản' }] : []),
-            { key: 'categories', icon: School, label: 'Quản lý danh mục (Trường, Khoa, Lớp)' },
-            { key: 'tickets', icon: HelpCircle, label: 'Quản lý hỗ trợ & báo lỗi' },
+            ...(user.role === 'Manager' ? [
+              { key: 'surveys', icon: ClipboardList, label: 'Quản lý phiếu khảo sát' },
+              { key: 'accounts', icon: Users, label: 'Duyệt Nhà tuyển dụng' }
+            ] : [
+              { key: 'accounts', icon: Users, label: 'Quản lý tài khoản' },
+              { key: 'categories', icon: School, label: 'Quản lý danh mục (Trường, Khoa, Lớp)' },
+              { key: 'tickets', icon: HelpCircle, label: 'Quản lý hỗ trợ & báo lỗi' }
+            ]),
             { key: 'profile', icon: User, label: 'Thông tin cá nhân' },
           ].map(({ key, icon: Icon, label }) => (
             <button
@@ -509,81 +518,90 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
         )}
 
         {/* ── Tab: Accounts (Admin & Manager) ── */}
-        {activeTab === 'accounts' && user.role === 'Manager' && (
+        {activeTab === 'accounts' && ['Admin', 'Manager'].includes(user.role) && (
           <div className="space-y-5">
             <div className="flex justify-between items-center">
               <div>
-                <h2 className="text-xl font-extrabold" style={{ color: '#2d4771' }}>Quản lý Phân Quyền Tài Khoản</h2>
-                <p className="text-xs mt-0.5" style={{ color: '#6E9AE0' }}>Thay đổi vai trò trực tiếp qua dropdown hoặc tạo/sửa thông tin tài khoản</p>
+                <h2 className="text-xl font-extrabold" style={{ color: '#2d4771' }}>
+                  {user.role === 'Admin' ? 'Quản lý Tài Khoản Hệ Thống' : 'Duyệt Tài Khoản Nhà Tuyển Dụng'}
+                </h2>
+                <p className="text-xs mt-0.5" style={{ color: '#6E9AE0' }}>
+                  {user.role === 'Admin' ? 'Tạo, sửa, xóa hoặc thay đổi phân quyền vai trò người dùng' : 'Phê duyệt các đăng ký tài khoản từ phía Nhà tuyển dụng'}
+                </p>
               </div>
-              <button
-                onClick={openCreateModal}
-                className="px-5 py-2.5 text-white font-bold rounded-2xl shadow-md transition-all text-sm flex items-center gap-2"
-                style={{ background: 'linear-gradient(135deg, #6E9AE0, #487bc9)' }}
-              >
-                <Plus size={17} /> Tạo Tài Khoản Mới
-              </button>
-            </div>
-
-            {/* Filter Bar */}
-            <div style={{
-              display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10,
-              background: '#fff', borderRadius: 20, border: '1.5px solid #D2DBEA',
-              padding: '12px 18px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginRight: 4 }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: '#487bc9' }}>Bộ lọc vị trí:</span>
-              </div>
-              
-              {/* Role filter */}
-              <select value={userFilters.role} onChange={e => setUserFilters(f => ({ ...f, role: e.target.value }))} style={{ padding: '7px 14px', borderRadius: 12, border: '1.5px solid #D2DBEA', background: '#fff', color: '#2d4771', fontSize: 13, fontWeight: 600, outline: 'none' }}>
-                <option value="">👥 Tất cả vai trò</option>
-                <option value="Manager">Cán bộ quản lý</option>
-                <option value="Student">Sinh viên</option>
-                <option value="Lecturer">Giảng viên</option>
-                <option value="Alumnus">Cựu sinh viên</option>
-                <option value="Employer">Nhà tuyển dụng</option>
-              </select>
-
-              {/* Department filter */}
-              <select value={userFilters.department} disabled={!userFilters.school} onChange={e => setUserFilters(f => ({ ...f, department: e.target.value, class: '' }))} style={{ padding: '7px 14px', borderRadius: 12, border: '1.5px solid #D2DBEA', background: '#fff', color: '#2d4771', fontSize: 13, fontWeight: 600, outline: 'none', opacity: userFilters.school ? 1 : 0.5 }}>
-                <option value="">📚 Tất cả khoa</option>
-                {(dynamicDepartments[userFilters.school] || []).map(d => (
-                  <option key={d} value={d}>{d}</option>
-                ))}
-              </select>
-
-              {/* Class filter */}
-              <select
-                value={userFilters.class}
-                disabled={!userFilters.department}
-                onChange={e => setUserFilters(f => ({ ...f, class: e.target.value }))}
-                style={{
-                  padding: '7px 14px', borderRadius: 12, border: '1.5px solid #D2DBEA',
-                  background: '#fff', color: '#2d4771', fontSize: 13, fontWeight: 600,
-                  outline: 'none', opacity: userFilters.department ? 1 : 0.5
-                }}
-              >
-                <option value="">🎓 Tất cả lớp</option>
-                {(dynamicClasses[userFilters.department] || []).map(c => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-
-              {/* Reset filter */}
-              {(userFilters.role || userFilters.department || userFilters.class) && (
-                <button onClick={() => setUserFilters({ role: '', school: user.school || '', department: '', class: '' })} style={{ padding: '6px 12px', borderRadius: 10, border: '1.5px solid #fecaca', background: '#fff5f5', color: '#dc2626', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
-                  Xóa lọc
+              {user.role === 'Admin' && (
+                <button
+                  onClick={openCreateModal}
+                  className="px-5 py-2.5 text-white font-bold rounded-2xl shadow-md transition-all text-sm flex items-center gap-2"
+                  style={{ background: 'linear-gradient(135deg, #6E9AE0, #487bc9)' }}
+                >
+                  <Plus size={17} /> Tạo Tài Khoản Mới
                 </button>
               )}
             </div>
+
+            {/* Filter Bar */}
+            {user.role === 'Admin' && (
+              <div style={{
+                display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10,
+                background: '#fff', borderRadius: 20, border: '1.5px solid #D2DBEA',
+                padding: '12px 18px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginRight: 4 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#487bc9' }}>Bộ lọc vị trí:</span>
+                </div>
+                
+                {/* Role filter */}
+                <select value={userFilters.role} onChange={e => setUserFilters(f => ({ ...f, role: e.target.value }))} style={{ padding: '7px 14px', borderRadius: 12, border: '1.5px solid #D2DBEA', background: '#fff', color: '#2d4771', fontSize: 13, fontWeight: 600, outline: 'none' }}>
+                  <option value="">👥 Tất cả vai trò</option>
+                  <option value="Admin">Quản trị viên</option>
+                  <option value="Manager">Cán bộ quản lý</option>
+                  <option value="Student">Sinh viên</option>
+                  <option value="Lecturer">Giảng viên</option>
+                  <option value="Alumnus">Cựu sinh viên</option>
+                  <option value="Employer">Nhà tuyển dụng</option>
+                </select>
+
+                {/* Department filter */}
+                <select value={userFilters.department} onChange={e => setUserFilters(f => ({ ...f, department: e.target.value, class: '' }))} style={{ padding: '7px 14px', borderRadius: 12, border: '1.5px solid #D2DBEA', background: '#fff', color: '#2d4771', fontSize: 13, fontWeight: 600, outline: 'none' }}>
+                  <option value="">📚 Tất cả khoa</option>
+                  {(dynamicDepartments['Trường Đại học Kiến trúc Đà Nẵng'] || []).map(d => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
+
+                {/* Class filter */}
+                <select
+                  value={userFilters.class}
+                  disabled={!userFilters.department}
+                  onChange={e => setUserFilters(f => ({ ...f, class: e.target.value }))}
+                  style={{
+                    padding: '7px 14px', borderRadius: 12, border: '1.5px solid #D2DBEA',
+                    background: '#fff', color: '#2d4771', fontSize: 13, fontWeight: 600,
+                    outline: 'none', opacity: userFilters.department ? 1 : 0.5
+                  }}
+                >
+                  <option value="">🎓 Tất cả lớp</option>
+                  {(dynamicClasses[userFilters.department] || []).map(c => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+
+                {/* Reset filter */}
+                {(userFilters.role || userFilters.department || userFilters.class) && (
+                  <button onClick={() => setUserFilters({ role: '', department: '', class: '' })} style={{ padding: '6px 12px', borderRadius: 10, border: '1.5px solid #fecaca', background: '#fff5f5', color: '#dc2626', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                    Xóa lọc
+                  </button>
+                )}
+              </div>
+            )}
 
             <div className="rounded-2xl border overflow-hidden shadow-sm" style={{ borderColor: '#D2DBEA', background: '#fff' }}>
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
                   <thead>
                     <tr style={{ background: '#EEF4FD', borderBottom: '2px solid #D2DBEA' }}>
-                      {['Mã nhận diện', 'Họ và tên', 'Email', 'Vai trò', 'Trường / Khoa', 'Trạng thái', 'Hành động'].map(h => (
+                      {['Mã nhận diện', 'Họ và tên', 'Email', 'Vai trò', 'Khoa / Lớp', 'Trạng thái', 'Hành động'].map(h => (
                         <th key={h} className="py-3.5 px-5 text-xs font-extrabold uppercase tracking-wide" style={{ color: '#6E9AE0' }}>{h}</th>
                       ))}
                     </tr>
@@ -595,24 +613,29 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
                         <td className="py-3.5 px-5 text-sm font-extrabold" style={{ color: '#2d4771' }}>{acc.fullName}</td>
                         <td className="py-3.5 px-5 text-xs font-mono" style={{ color: '#6E9AE0' }}>{acc.email}</td>
                         <td className="py-3.5 px-5">
-                          <select
-                            value={acc.roleId}
-                            onChange={e => changeRole(acc.id, e.target.value)}
-                            disabled={acc.id === user.id}
-                            className="rounded-xl px-2 py-1 text-xs font-bold outline-none border disabled:opacity-40"
-                            style={{ background: '#EEF4FD', borderColor: '#D2DBEA', color: '#2d4771' }}
-                          >
-                            {roles
-                              .filter(r => !(r.id === 1 || r.name === 'Admin'))
-                              .map(r => <option key={r.id} value={r.id}>{ROLE_LABELS[r.name] || r.name}</option>)
-                            }
-                          </select>
+                          {user.role === 'Admin' ? (
+                            <select
+                              value={acc.roleId}
+                              onChange={e => changeRole(acc.id, e.target.value)}
+                              disabled={acc.id === user.id}
+                              className="rounded-xl px-2 py-1 text-xs font-bold outline-none border disabled:opacity-40"
+                              style={{ background: '#EEF4FD', borderColor: '#D2DBEA', color: '#2d4771' }}
+                            >
+                              {roles
+                                .filter(r => !(r.id === 1 || r.name === 'Admin'))
+                                .map(r => <option key={r.id} value={r.id}>{ROLE_LABELS[r.name] || r.name}</option>)
+                              }
+                            </select>
+                          ) : (
+                            <span className="px-2 py-1 rounded-xl text-xs font-bold" style={{ background: '#EEF4FD', color: '#6E9AE0' }}>
+                              {ROLE_LABELS[acc.role?.name || acc.role] || acc.role?.name || acc.role}
+                            </span>
+                          )}
                         </td>
                         <td className="py-3.5 px-5 text-xs" style={{ color: '#2d4771' }}>
-                          {acc.school ? (
+                          {acc.department ? (
                             <div>
-                              <span className="font-bold">{acc.school.includes('DAU') ? 'DAU' : acc.school.includes('VKU') ? 'VKU' : acc.school}</span>
-                              {acc.department && ` › ${acc.department}`}
+                              <span className="font-bold">{acc.department}</span>
                               {acc.class && ` › ${acc.class}`}
                             </div>
                           ) : '—'}
@@ -636,24 +659,28 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
                                 Phê duyệt
                               </button>
                             )}
-                            <button
-                              onClick={() => openEditModal(acc)}
-                              disabled={acc.id === user.id}
-                              className="p-2 rounded-xl transition-all disabled:opacity-30"
-                              style={{ background: '#FFFBEB', color: '#D97706' }}
-                              title="Chỉnh sửa"
-                            >
-                              <Edit size={15} />
-                            </button>
-                            <button
-                              onClick={() => deleteUser(acc.id)}
-                              disabled={acc.id === user.id}
-                              className="p-2 rounded-xl transition-all disabled:opacity-30"
-                              style={{ background: '#FFF5F5', color: '#dc2626' }}
-                              title="Xóa"
-                            >
-                              <Trash2 size={15} />
-                            </button>
+                            {user.role === 'Admin' && (
+                              <>
+                                <button
+                                  onClick={() => openEditModal(acc)}
+                                  disabled={acc.id === user.id}
+                                  className="p-2 rounded-xl transition-all disabled:opacity-30"
+                                  style={{ background: '#FFFBEB', color: '#D97706' }}
+                                  title="Chỉnh sửa"
+                                >
+                                  <Edit size={15} />
+                                </button>
+                                <button
+                                  onClick={() => deleteUser(acc.id)}
+                                  disabled={acc.id === user.id}
+                                  className="p-2 rounded-xl transition-all disabled:opacity-30"
+                                  style={{ background: '#FFF5F5', color: '#dc2626' }}
+                                  title="Xóa"
+                                >
+                                  <Trash2 size={15} />
+                                </button>
+                              </>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -677,62 +704,11 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
           <div className="space-y-5">
             <div>
               <h2 className="text-xl font-extrabold" style={{ color: '#2d4771' }}>Quản lý Danh mục</h2>
-              <p className="text-xs mt-0.5" style={{ color: '#6E9AE0' }}>Quản lý cây danh mục: Trường → Khoa / Phòng ban → Lớp hành chính. Nhấn vào một mục để xem cấp dưới.</p>
+              <p className="text-xs mt-0.5" style={{ color: '#6E9AE0' }}>Quản lý cây danh mục: Khoa / Phòng ban → Lớp hành chính. Nhấn vào một khoa để xem danh sách lớp.</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              {/* ── Column 1: Schools ── */}
-              <div className="rounded-2xl border shadow-sm overflow-hidden" style={{ borderColor: '#D2DBEA', background: '#fff' }}>
-                <div className="flex justify-between items-center px-4 py-3 border-b" style={{ background: '#EEF4FD', borderColor: '#D2DBEA' }}>
-                  <h3 className="font-extrabold text-sm" style={{ color: '#2d4771' }}>🏫 Trường Đại học</h3>
-                  {user.role !== 'Manager' && (
-                    <button
-                      onClick={() => openCategoryModal('school', 'create')}
-                      className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-white rounded-xl shadow-sm"
-                      style={{ background: 'linear-gradient(135deg, #6E9AE0, #487bc9)' }}
-                    >
-                      <Plus size={12} /> Thêm
-                    </button>
-                  )}
-                </div>
-                <div className="divide-y" style={{ borderColor: '#D2DBEA' }}>
-                  {categoriesTree.length === 0 ? (
-                    <p className="text-center py-8 text-xs text-slate-400">Chưa có trường nào. Hãy thêm trường đầu tiên.</p>
-                  ) : categoriesTree
-                      .filter(school => !(user.role === 'Manager' && school.name !== user.school))
-                      .map(school => (
-                    <div
-                      key={school.id}
-                      className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-blue-50 transition-all"
-                      style={{ background: selectedSchoolId === school.id ? '#EEF4FD' : undefined, borderLeft: selectedSchoolId === school.id ? '3px solid #6E9AE0' : '3px solid transparent' }}
-                      onClick={() => { setSelectedSchoolId(school.id); setSelectedDeptId(null); }}
-                    >
-                      <div>
-                        <p className="font-bold text-sm" style={{ color: '#2d4771' }}>{school.name}</p>
-                        <p className="text-xs" style={{ color: '#6E9AE0' }}>{school.departments?.length || 0} khoa</p>
-                      </div>
-                      {user.role !== 'Manager' && (
-                        <div className="flex gap-1">
-                          <button
-                            onClick={e => { e.stopPropagation(); openCategoryModal('school', 'edit', null, school.id, school.name); }}
-                            className="p-1.5 rounded-lg transition-all"
-                            style={{ background: '#FFFBEB', color: '#D97706' }}
-                            title="Sửa"
-                          ><Edit size={13} /></button>
-                          <button
-                            onClick={e => { e.stopPropagation(); handleDeleteCategory('school', school.id); }}
-                            className="p-1.5 rounded-lg transition-all"
-                            style={{ background: '#FFF5F5', color: '#dc2626' }}
-                            title="Xóa"
-                          ><Trash2 size={13} /></button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* ── Column 2: Departments ── */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {/* ── Column 1: Departments ── */}
               <div className="rounded-2xl border shadow-sm overflow-hidden" style={{ borderColor: '#D2DBEA', background: '#fff' }}>
                 <div className="flex justify-between items-center px-4 py-3 border-b" style={{ background: '#F0F9FF', borderColor: '#D2DBEA' }}>
                   <h3 className="font-extrabold text-sm" style={{ color: '#2d4771' }}>📚 Khoa / Phòng ban</h3>
@@ -742,18 +718,18 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
                       className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-white rounded-xl shadow-sm"
                       style={{ background: 'linear-gradient(135deg, #6E9AE0, #487bc9)' }}
                     >
-                      <Plus size={12} /> Thêm
+                      <Plus size={12} /> Thêm khoa
                     </button>
                   )}
                 </div>
                 <div className="divide-y" style={{ borderColor: '#D2DBEA' }}>
                   {!selectedSchoolId ? (
-                    <p className="text-center py-8 text-xs text-slate-400">← Chọn một trường để xem danh sách khoa</p>
+                    <p className="text-center py-8 text-xs text-slate-400">Đang tải danh mục khoa...</p>
                   ) : (() => {
                     const selectedSchool = categoriesTree.find(s => s.id === selectedSchoolId);
                     const depts = selectedSchool?.departments || [];
                     return depts.length === 0 ? (
-                      <p className="text-center py-8 text-xs text-slate-400">Chưa có khoa nào. Nhấn "Thêm" để tạo.</p>
+                      <p className="text-center py-8 text-xs text-slate-400">Chưa có khoa nào. Nhấn "Thêm khoa" để tạo.</p>
                     ) : depts.map(dept => (
                       <div
                         key={dept.id}
@@ -785,7 +761,7 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
                 </div>
               </div>
 
-              {/* ── Column 3: Classrooms ── */}
+              {/* ── Column 2: Classrooms ── */}
               <div className="rounded-2xl border shadow-sm overflow-hidden" style={{ borderColor: '#D2DBEA', background: '#fff' }}>
                 <div className="flex justify-between items-center px-4 py-3 border-b" style={{ background: '#F0FDF4', borderColor: '#D2DBEA' }}>
                   <h3 className="font-extrabold text-sm" style={{ color: '#2d4771' }}>🎓 Lớp hành chính</h3>
@@ -795,7 +771,7 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
                       className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-white rounded-xl shadow-sm"
                       style={{ background: 'linear-gradient(135deg, #6E9AE0, #487bc9)' }}
                     >
-                      <Plus size={12} /> Thêm
+                      <Plus size={12} /> Thêm lớp
                     </button>
                   )}
                 </div>
@@ -807,7 +783,7 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
                     const selectedDept = selectedSchool?.departments?.find(d => d.id === selectedDeptId);
                     const classrooms = selectedDept?.classrooms || [];
                     return classrooms.length === 0 ? (
-                      <p className="text-center py-8 text-xs text-slate-400">Chưa có lớp nào. Nhấn "Thêm" để tạo.</p>
+                      <p className="text-center py-8 text-xs text-slate-400">Chưa có lớp nào. Nhấn "Thêm lớp" để tạo.</p>
                     ) : classrooms.map(cls => (
                       <div
                         key={cls.id}

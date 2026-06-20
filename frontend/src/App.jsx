@@ -77,7 +77,7 @@ function App() {
           path="/dashboard"
           element={
             user ? (
-              user.role === 'Manager' ? (
+              ['Admin', 'Manager'].includes(user.role) ? (
                 <AdminDashboard user={user} onLogout={logout} onUpdateUser={updateUser} />
               ) : (
                 <Dashboard user={user} onLogout={logout} onUpdateUser={updateUser} />
@@ -106,11 +106,11 @@ function App() {
           }
         />
 
-        {/* ── Support tickets (Admin/Manager) ── */}
+        {/* ── Support tickets (Admin only) ── */}
         <Route
           path="/support-tickets"
           element={
-            user && user.role === 'Manager' ? (
+            user && user.role === 'Admin' ? (
               <SupportManagement user={user} onLogout={logout} />
             ) : (
               <Navigate to="/login" replace />

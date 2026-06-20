@@ -139,8 +139,8 @@ async function startServer() {
         const { User } = require('./models');
         const oldAdminExists = await User.findOne({ where: { email: 'admin@edu.vn' } });
         const newAdminExists = await User.findOne({ where: { email: 'trankimlien31072004@gmail.com' } });
-        if (oldAdminExists || !newAdminExists) {
-          console.log('Detected old database state (admin@edu.vn exists or trankimlien31072004@gmail.com is missing). Wiping and rebuilding database...');
+        if (oldAdminExists || !newAdminExists || newAdminExists.roleId !== 1) {
+          console.log('Detected old database state (admin@edu.vn exists, trankimlien31072004@gmail.com is missing or has wrong roleId). Wiping and rebuilding database...');
           needsReset = true;
         }
       } catch (err) {
@@ -182,7 +182,7 @@ async function startServer() {
       if (!managerExists) {
         console.log('No Manager account found in database. Creating genesis Manager...');
         const bcrypt = require('bcryptjs');
-        const managerEmail = process.env.ADMIN_EMAIL || 'trankimlien31072004@gmail.com';
+        const managerEmail = process.env.ADMIN_EMAIL || 'manager@edu.vn';
         const managerPassword = process.env.ADMIN_PASSWORD || '12345678';
         const hashedPw = await bcrypt.hash(managerPassword, 10);
         await User.create({

@@ -20,9 +20,9 @@ router.get('/', async (req, res) => {
   }
 });
 
-// ── Department CRUD (Manager only) ─────────────────────────────────────────
+// ── Department CRUD (Admin only) ─────────────────────────────────────────
 // Nested create: POST /schools/:schoolId/departments
-router.post('/schools/:schoolId/departments', authenticateToken, authorizeRoles('Manager'), async (req, res) => {
+router.post('/schools/:schoolId/departments', authenticateToken, authorizeRoles('Admin'), async (req, res) => {
   try {
     const { name } = req.body;
     const { schoolId } = req.params;
@@ -31,13 +31,8 @@ router.post('/schools/:schoolId/departments', authenticateToken, authorizeRoles(
     const school = await School.findByPk(schoolId);
     if (!school) return res.status(404).json({ message: 'Trường học không tồn tại.' });
 
-    const manager = await User.findByPk(req.user.id);
-    if (!manager || !manager.school || school.name !== manager.school) {
-      return res.status(403).json({ message: 'Bạn không có quyền quản lý khoa của trường học này.' });
-    }
-
     const existing = await Department.findOne({ where: { name: name.trim(), schoolId } });
-    if (existing) return res.status(400).json({ message: 'Khoa này đã tồn tại trong trường này.' });
+    if (existing) return res.status(400).json({ message: 'Khoa này đã tồn tại.' });
     
     const department = await Department.create({ name: name.trim(), schoolId });
     res.status(201).json({ message: 'Thêm khoa thành công!', department });
@@ -47,7 +42,7 @@ router.post('/schools/:schoolId/departments', authenticateToken, authorizeRoles(
 });
 
 // Flat create: POST /departments
-router.post('/departments', authenticateToken, authorizeRoles('Manager'), async (req, res) => {
+router.post('/departments', authenticateToken, authorizeRoles('Admin'), async (req, res) => {
   try {
     const { name, schoolId } = req.body;
     if (!name || !name.trim() || !schoolId) return res.status(400).json({ message: 'Vui lòng cung cấp đầy đủ tên khoa và trường liên kết.' });
@@ -55,13 +50,8 @@ router.post('/departments', authenticateToken, authorizeRoles('Manager'), async 
     const school = await School.findByPk(schoolId);
     if (!school) return res.status(400).json({ message: 'Trường học liên kết không tồn tại.' });
 
-    const manager = await User.findByPk(req.user.id);
-    if (!manager || !manager.school || school.name !== manager.school) {
-      return res.status(403).json({ message: 'Bạn không có quyền quản lý khoa của trường học này.' });
-    }
-
     const existing = await Department.findOne({ where: { name: name.trim(), schoolId } });
-    if (existing) return res.status(400).json({ message: 'Khoa này đã tồn tại trong trường này.' });
+    if (existing) return res.status(400).json({ message: 'Khoa này đã tồn tại.' });
     
     const department = await Department.create({ name: name.trim(), schoolId });
     res.status(201).json({ message: 'Thêm khoa thành công!', department });
@@ -71,23 +61,16 @@ router.post('/departments', authenticateToken, authorizeRoles('Manager'), async 
 });
 
 // PUT department
-router.put('/departments/:id', authenticateToken, authorizeRoles('Manager'), async (req, res) => {
+router.put('/departments/:id', authenticateToken, authorizeRoles('Admin'), async (req, res) => {
   try {
     const { name } = req.body;
     if (!name || !name.trim()) return res.status(400).json({ message: 'Tên khoa không được để trống.' });
     
-    const dept = await Department.findByPk(req.params.id, {
-      include: [{ model: School, as: 'school' }]
-    });
+    const dept = await Department.findByPk(req.params.id);
     if (!dept) return res.status(404).json({ message: 'Không tìm thấy khoa.' });
 
-    const manager = await User.findByPk(req.user.id);
-    if (!manager || !manager.school || !dept.school || dept.school.name !== manager.school) {
-      return res.status(403).json({ message: 'Bạn không có quyền chỉnh sửa khoa của trường học này.' });
-    }
-
     const existing = await Department.findOne({ where: { name: name.trim(), schoolId: dept.schoolId } });
-    if (existing && existing.id !== dept.id) return res.status(400).json({ message: 'Khoa này đã tồn tại trong trường này.' });
+    if (existing && existing.id !== dept.id) return res.status(400).json({ message: 'Khoa này đã tồn tại.' });
     
     dept.name = name.trim();
     await dept.save();
@@ -98,17 +81,10 @@ router.put('/departments/:id', authenticateToken, authorizeRoles('Manager'), asy
 });
 
 // DELETE department
-router.delete('/departments/:id', authenticateToken, authorizeRoles('Manager'), async (req, res) => {
+router.delete('/departments/:id', authenticateToken, authorizeRoles('Admin'), async (req, res) => {
   try {
-    const dept = await Department.findByPk(req.params.id, {
-      include: [{ model: School, as: 'school' }]
-    });
+    const dept = await Department.findByPk(req.params.id);
     if (!dept) return res.status(404).json({ message: 'Không tìm thấy khoa.' });
-
-    const manager = await User.findByPk(req.user.id);
-    if (!manager || !manager.school || !dept.school || dept.school.name !== manager.school) {
-      return res.status(403).json({ message: 'Bạn không có quyền xóa khoa của trường học này.' });
-    }
 
     await dept.destroy();
     res.json({ message: 'Xóa khoa thành công!' });
@@ -117,26 +93,19 @@ router.delete('/departments/:id', authenticateToken, authorizeRoles('Manager'), 
   }
 });
 
-// ── Classroom CRUD (Manager only) ──────────────────────────────────────────
+// ── Classroom CRUD (Admin only) ──────────────────────────────────────────
 // Nested create: POST /departments/:deptId/classrooms
-router.post('/departments/:deptId/classrooms', authenticateToken, authorizeRoles('Manager'), async (req, res) => {
+router.post('/departments/:deptId/classrooms', authenticateToken, authorizeRoles('Admin'), async (req, res) => {
   try {
     const { name } = req.body;
     const { deptId } = req.params;
     if (!name || !name.trim()) return res.status(400).json({ message: 'Tên lớp không được để trống.' });
     
-    const dept = await Department.findByPk(deptId, {
-      include: [{ model: School, as: 'school' }]
-    });
+    const dept = await Department.findByPk(deptId);
     if (!dept) return res.status(404).json({ message: 'Khoa không tồn tại.' });
 
-    const manager = await User.findByPk(req.user.id);
-    if (!manager || !manager.school || !dept.school || dept.school.name !== manager.school) {
-      return res.status(403).json({ message: 'Bạn không có quyền quản lý lớp học của trường học này.' });
-    }
-
     const existing = await Classroom.findOne({ where: { name: name.trim(), departmentId: deptId } });
-    if (existing) return res.status(400).json({ message: 'Lớp này đã tồn tại trong khoa này.' });
+    if (existing) return res.status(400).json({ message: 'Lớp này đã tồn tại.' });
     
     const classroom = await Classroom.create({ name: name.trim(), departmentId: deptId });
     res.status(201).json({ message: 'Thêm lớp học thành công!', classroom });
@@ -146,23 +115,16 @@ router.post('/departments/:deptId/classrooms', authenticateToken, authorizeRoles
 });
 
 // Flat create: POST /classes
-router.post('/classes', authenticateToken, authorizeRoles('Manager'), async (req, res) => {
+router.post('/classes', authenticateToken, authorizeRoles('Admin'), async (req, res) => {
   try {
     const { name, departmentId } = req.body;
     if (!name || !name.trim() || !departmentId) return res.status(400).json({ message: 'Vui lòng cung cấp đầy đủ tên lớp và khoa liên kết.' });
     
-    const dept = await Department.findByPk(departmentId, {
-      include: [{ model: School, as: 'school' }]
-    });
+    const dept = await Department.findByPk(departmentId);
     if (!dept) return res.status(400).json({ message: 'Khoa liên kết không tồn tại.' });
 
-    const manager = await User.findByPk(req.user.id);
-    if (!manager || !manager.school || !dept.school || dept.school.name !== manager.school) {
-      return res.status(403).json({ message: 'Bạn không có quyền quản lý lớp học của trường học này.' });
-    }
-
     const existing = await Classroom.findOne({ where: { name: name.trim(), departmentId } });
-    if (existing) return res.status(400).json({ message: 'Lớp này đã tồn tại trong khoa này.' });
+    if (existing) return res.status(400).json({ message: 'Lớp này đã tồn tại.' });
     
     const classroom = await Classroom.create({ name: name.trim(), departmentId });
     res.status(201).json({ message: 'Thêm lớp học thành công!', classroom });
@@ -172,23 +134,16 @@ router.post('/classes', authenticateToken, authorizeRoles('Manager'), async (req
 });
 
 // PUT classroom
-router.put('/classrooms/:id', authenticateToken, authorizeRoles('Manager'), async (req, res) => {
+router.put('/classrooms/:id', authenticateToken, authorizeRoles('Admin'), async (req, res) => {
   try {
     const { name } = req.body;
     if (!name || !name.trim()) return res.status(400).json({ message: 'Tên lớp không được để trống.' });
     
-    const classroom = await Classroom.findByPk(req.params.id, {
-      include: [{ model: Department, as: 'department', include: [{ model: School, as: 'school' }] }]
-    });
+    const classroom = await Classroom.findByPk(req.params.id);
     if (!classroom) return res.status(404).json({ message: 'Không tìm thấy lớp học.' });
 
-    const manager = await User.findByPk(req.user.id);
-    if (!manager || !manager.school || !classroom.department || !classroom.department.school || classroom.department.school.name !== manager.school) {
-      return res.status(403).json({ message: 'Bạn không có quyền chỉnh sửa lớp học của trường học này.' });
-    }
-
     const existing = await Classroom.findOne({ where: { name: name.trim(), departmentId: classroom.departmentId } });
-    if (existing && existing.id !== classroom.id) return res.status(400).json({ message: 'Lớp này đã tồn tại trong khoa này.' });
+    if (existing && existing.id !== classroom.id) return res.status(400).json({ message: 'Lớp này đã tồn tại.' });
     
     classroom.name = name.trim();
     await classroom.save();
@@ -199,17 +154,10 @@ router.put('/classrooms/:id', authenticateToken, authorizeRoles('Manager'), asyn
 });
 
 // DELETE classroom
-router.delete('/classrooms/:id', authenticateToken, authorizeRoles('Manager'), async (req, res) => {
+router.delete('/classrooms/:id', authenticateToken, authorizeRoles('Admin'), async (req, res) => {
   try {
-    const classroom = await Classroom.findByPk(req.params.id, {
-      include: [{ model: Department, as: 'department', include: [{ model: School, as: 'school' }] }]
-    });
+    const classroom = await Classroom.findByPk(req.params.id);
     if (!classroom) return res.status(404).json({ message: 'Không tìm thấy lớp học.' });
-
-    const manager = await User.findByPk(req.user.id);
-    if (!manager || !manager.school || !classroom.department || !classroom.department.school || classroom.department.school.name !== manager.school) {
-      return res.status(403).json({ message: 'Bạn không có quyền xóa lớp học của trường học này.' });
-    }
 
     await classroom.destroy();
     res.json({ message: 'Xóa lớp học thành công!' });

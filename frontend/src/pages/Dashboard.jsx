@@ -4,7 +4,7 @@ import { LogOut, ClipboardList, Bell, User, Calendar, FileText, CheckCircle, Clo
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-const ROLE_LABELS = { Student: 'Sinh viên', Lecturer: 'Giảng viên', Alumnus: 'Cựu sinh viên', Employer: 'Nhà tuyển dụng', Manager: 'Cán bộ quản lý' };
+const ROLE_LABELS = { Admin: 'Quản trị viên', Manager: 'Cán bộ quản lý', Student: 'Sinh viên', Lecturer: 'Giảng viên', Alumnus: 'Cựu sinh viên', Employer: 'Nhà tuyển dụng' };
 const TARGET_LABELS = { Student: 'Sinh viên', Lecturer: 'Giảng viên', Alumnus: 'Cựu sinh viên', Employer: 'Nhà tuyển dụng', All: 'Tất cả' };
 
 const SCHOOLS = [];

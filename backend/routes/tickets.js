@@ -55,8 +55,8 @@ router.get('/', authenticateToken, async (req, res) => {
     const userRole = req.user.role;
     const userId = req.user.id;
 
-    if (userRole === 'Manager') {
-      // Manager can see all tickets
+    if (userRole === 'Admin') {
+      // Admin can see all tickets
       const tickets = await SupportTicket.findAll({
         include: [
           {
@@ -83,8 +83,8 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
-// 3. Reply to a Support Ticket (Manager only)
-router.put('/:id/reply', authenticateToken, authorizeRoles('Manager'), async (req, res) => {
+// 3. Reply to a Support Ticket (Admin only)
+router.put('/:id/reply', authenticateToken, authorizeRoles('Admin'), async (req, res) => {
   try {
     const { id } = req.params;
     const { reply, status } = req.body;
@@ -156,7 +156,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
     }
 
     // Check permissions
-    if (req.user.id !== ticket.userId && req.user.role !== 'Manager') {
+    if (req.user.id !== ticket.userId && req.user.role !== 'Admin') {
       return res.status(403).json({ message: 'Bạn không có quyền sửa đổi yêu cầu hỗ trợ này.' });
     }
 
@@ -181,7 +181,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     }
 
     // Check permissions
-    if (req.user.id !== ticket.userId && req.user.role !== 'Manager') {
+    if (req.user.id !== ticket.userId && req.user.role !== 'Admin') {
       return res.status(403).json({ message: 'Bạn không có quyền xóa yêu cầu hỗ trợ này.' });
     }
 

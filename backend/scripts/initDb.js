@@ -20,9 +20,10 @@ async function seed() {
     await sequelize.sync({ force: true });
     console.log('Database synced successfully!');
 
-    // 1. Seed Roles (Consolidated, no Admin)
+    // 1. Seed Roles (Consolidated, including Admin)
     console.log('Seeding Roles...');
     await Role.bulkCreate([
+      { id: 1, name: 'Admin' },
       { id: 2, name: 'Manager' },
       { id: 3, name: 'Student' },
       { id: 4, name: 'Lecturer' },
@@ -57,11 +58,25 @@ async function seed() {
 
     console.log('Schools, Departments, Classrooms seeded.');
 
-    // Seed Manager User (roleId: 2)
-    console.log('Seeding Manager User...');
+    // Seed Admin User (roleId: 1)
+    console.log('Seeding Admin User...');
     const hashedPassword = await bcrypt.hash('12345678', 10);
     await User.create({
       email: 'trankimlien31072004@gmail.com',
+      password: hashedPassword,
+      fullName: 'Quản trị viên Hệ thống',
+      code: 'ADMIN_01',
+      roleId: 1, // Admin
+      school: 'Trường Đại học Kiến trúc Đà Nẵng',
+      department: 'Khoa Công nghệ thông tin',
+      status: 'Active'
+    });
+    console.log('Admin User seeded.');
+
+    // Seed Manager User (roleId: 2)
+    console.log('Seeding Manager User...');
+    await User.create({
+      email: 'manager@edu.vn',
       password: hashedPassword,
       fullName: 'Cán bộ Quản lý ĐBCL',
       code: 'CB_DBCL_01',
