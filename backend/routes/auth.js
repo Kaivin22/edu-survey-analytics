@@ -295,7 +295,7 @@ router.post('/change-password', authenticateToken, async (req, res) => {
 
 // --- NEW FEATURES: GOOGLE LOGIN, FORGOT PASSWORD WITH REAL EMAIL OTP ---
 
-const nodemailer = require('nodemailer');
+const { sendEmail } = require('../utils/mailer');
 
 const demoEmails = [
   'admin@edu.vn',
@@ -309,27 +309,6 @@ const demoEmails = [
 
 // In-memory OTP storage: email -> { otp, expires }
 const otpStore = new Map();
-
-// Configure SMTP transporter
-const transporter = nodemailer.createTransport({
-  // Thay vì smtp.gmail.com, dùng IP IPv4 trực tiếp của Google để triệt tiêu lỗi IPv6 trên Render
-  host: process.env.SMTP_HOST || '74.125.68.108',
-  port: parseInt(process.env.SMTP_PORT) || 587,
-  secure: false, // Ép bằng false nếu dùng cổng 587
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-  /* Loại bỏ hoàn toàn các thuộc tính timeout quá ngắn đề phòng mạng Render bị chậm */
-  connectionTimeout: 15000, // Tăng lên 15 giây
-  greetingTimeout: 15000,
-  socketTimeout: 15000,
-  tls: {
-    // Không kiểm tra chứng chỉ nghiêm ngặt để tránh lỗi tên miền không khớp khi dùng IP trực tiếp
-    rejectUnauthorized: false,
-    servername: 'smtp.gmail.com' // Giúp xác thực TLS với Google mượt mà hơn
-  }
-});
 
 // 6. Forgot Password - Request OTP
 router.post('/forgot-password', async (req, res) => {
@@ -358,13 +337,10 @@ router.post('/forgot-password', async (req, res) => {
     otpStore.set(email.toLowerCase(), { otp, expires });
 
     // Send email
-    const mailOptions = {
-      from: process.env.SMTP_FROM || '"Academic Synergy" <your-email@gmail.com>',
-      to: email,
-      subject: 'Mã xác minh khôi phục mật khẩu - Academic Synergy',
-      html: `
+    const subject = 'Mã xác minh khôi phục mật khẩu - Hệ thống Khảo sát Trường Học';
+    const htmlContent = `
         <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 25px; border: 1px solid #D2DBEA; border-radius: 16px; background-color: #F9FAFD;">
-          <h2 style="color: #6E9AE0; margin-top: 0; text-align: center;">Academic Synergy</h2>
+          <h2 style="color: #6E9AE0; margin-top: 0; text-align: center;">Khảo Sát Ý Kiến</h2>
           <hr style="border: 0; border-top: 1px solid #D2DBEA; margin: 20px 0;">
           <p>Xin chào <strong>${user.fullName}</strong>,</p>
           <p>Chúng tôi nhận được yêu cầu khôi phục mật khẩu cho tài khoản của bạn. Vui lòng sử dụng mã OTP dưới đây để hoàn tất:</p>
@@ -373,12 +349,13 @@ router.post('/forgot-password', async (req, res) => {
           </div>
           <p style="font-size: 13px; color: #718096; text-align: center;">Mã xác minh này có hiệu lực trong vòng 10 phút. Nếu bạn không yêu cầu, vui lòng bỏ qua email này.</p>
           <hr style="border: 0; border-top: 1px solid #D2DBEA; margin: 20px 0;">
-          <p style="font-size: 12px; color: #A0AEC0; text-align: center; margin-bottom: 0;">Academic Synergy © 2026</p>
+          <p style="font-size: 12px; color: #A0AEC0; text-align: center; margin-bottom: 0;">Trường Đại học Kiến trúc Đà Nẵng © 2026</p>
         </div>
-      `
-    };
+      `;
 
-    await transporter.sendMail(mailOptions);
+    const success = await sendEmail(email, subject, `Mã OTP của bạn là: ${otp}`, htmlContent);
+    if (!success) throw new Error('Không thể kết nối đến máy chủ SMTP.');
+
     res.json({ message: 'Mã xác minh OTP đã được gửi tới email của bạn. Vui lòng kiểm tra hộp thư!' });
 
   } catch (error) {

@@ -23,11 +23,26 @@ function Dashboard({ user, onLogout, onUpdateUser }) {
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
 
+  // New States
+  const [historySurveys, setHistorySurveys] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [tickets, setTickets] = useState([]);
+  const [ticketsLoading, setTicketsLoading] = useState(false);
+  const [ticketForm, setTicketForm] = useState({ subject: '', message: '' });
+  const [ticketSubmitting, setTicketSubmitting] = useState(false);
+  const [activeReplyId, setActiveReplyId] = useState(null);
+  const [replyText, setReplyText] = useState('');
+  const [replyStatus, setReplyStatus] = useState('Resolved');
+
   useEffect(() => {
     fetchSurveys();
     fetchNotifications();
     if (['Admin', 'Manager'].includes(user.role)) {
       fetchCreatedSurveys();
+      fetchTickets();
+    } else {
+      fetchHistorySurveys();
+      fetchTickets();
     }
   }, []);
 
@@ -46,6 +61,79 @@ function Dashboard({ user, onLogout, onUpdateUser }) {
       const data = await res.json();
       if (res.ok) setCreatedSurveys(data);
     } catch (e) { console.error(e); } finally { setCreatedSurveysLoading(false); }
+  };
+
+  const fetchHistorySurveys = async () => {
+    setHistoryLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/surveys?history=true`, { headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      if (res.ok) setHistorySurveys(data);
+    } catch (e) { console.error(e); } finally { setHistoryLoading(false); }
+  };
+
+  const fetchTickets = async () => {
+    setTicketsLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/tickets`, { headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      if (res.ok) setTickets(data);
+    } catch (e) { console.error(e); } finally { setTicketsLoading(false); }
+  };
+
+  const handleCreateTicket = async (e) => {
+    e.preventDefault();
+    if (!ticketForm.subject || !ticketForm.message) {
+      alert('Vui lòng điền đầy đủ tiêu đề và nội dung.');
+      return;
+    }
+    setTicketSubmitting(true);
+    try {
+      const res = await fetch(`${API_URL}/tickets`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(ticketForm)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert('Gửi yêu cầu hỗ trợ thành công!');
+        setTicketForm({ subject: '', message: '' });
+        fetchTickets();
+      } else {
+        alert(data.message || 'Lỗi gửi yêu cầu hỗ trợ.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Lỗi kết nối mạng.');
+    } finally {
+      setTicketSubmitting(false);
+    }
+  };
+
+  const handleReplyTicket = async (id) => {
+    if (!replyText) {
+      alert('Vui lòng nhập câu trả lời phản hồi.');
+      return;
+    }
+    try {
+      const res = await fetch(`${API_URL}/tickets/${id}/reply`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ reply: replyText, status: replyStatus })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert('Phản hồi thành công!');
+        setActiveReplyId(null);
+        setReplyText('');
+        fetchTickets();
+      } else {
+        alert(data.message || 'Lỗi phản hồi.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Lỗi kết nối.');
+    }
   };
 
   const deleteSurvey = async (id) => {
@@ -87,7 +175,7 @@ function Dashboard({ user, onLogout, onUpdateUser }) {
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
             <Link to="/" className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center text-white text-decoration-none"><ClipboardList size={20} /></Link>
-            <Link to="/" className="text-xl font-extrabold text-white tracking-tight" style={{ textDecoration: 'none' }}>Academic Synergy</Link>
+            <Link to="/" className="text-xl font-extrabold text-white tracking-tight" style={{ textDecoration: 'none' }}>ĐBCL - Đại học Kiến trúc Đà Nẵng</Link>
           </div>
 
           <div className="flex items-center gap-3">
@@ -203,13 +291,16 @@ function Dashboard({ user, onLogout, onUpdateUser }) {
           {/* Side menu */}
           <div className="rounded-2xl p-3 space-y-1 border" style={{ background: '#fff', borderColor: '#D2DBEA' }}>
             {[
-              { key: 'surveys', icon: ClipboardList, label: 'Khảo sát của tôi' },
+              { key: 'surveys', icon: ClipboardList, label: 'Khảo sát cần làm', visible: !['Admin', 'Manager'].includes(user.role) },
               {
                 key: 'created-surveys',
                 icon: FileText,
                 label: 'Khảo sát đã tạo',
                 visible: ['Admin', 'Manager'].includes(user.role)
               },
+              { key: 'history', icon: CheckCircle, label: 'Lịch sử khảo sát', visible: !['Admin', 'Manager'].includes(user.role) },
+              { key: 'tickets', icon: HelpCircle, label: 'Báo lỗi & Hỗ trợ', visible: !['Admin', 'Manager'].includes(user.role) },
+              { key: 'tickets-manage', icon: HelpCircle, label: 'Quản lý Hỗ trợ', visible: ['Admin', 'Manager'].includes(user.role) },
               { key: 'profile', icon: User, label: 'Thông tin cá nhân' },
             ]
             .filter(item => item.visible !== false)
@@ -366,6 +457,30 @@ function Dashboard({ user, onLogout, onUpdateUser }) {
                 </div>
               )}
             </div>
+          ) : activeTab === 'history' ? (
+            <HistorySurveysTab historySurveys={historySurveys} historyLoading={historyLoading} />
+          ) : activeTab === 'tickets' ? (
+            <UserTicketsTab
+              tickets={tickets}
+              ticketsLoading={ticketsLoading}
+              ticketForm={ticketForm}
+              setTicketForm={setTicketForm}
+              ticketSubmitting={ticketSubmitting}
+              handleCreateTicket={handleCreateTicket}
+            />
+          ) : activeTab === 'tickets-manage' ? (
+            <ManagerTicketsTab
+              tickets={tickets}
+              ticketsLoading={ticketsLoading}
+              activeReplyId={activeReplyId}
+              setActiveReplyId={setActiveReplyId}
+              replyText={replyText}
+              setReplyText={setReplyText}
+              replyStatus={replyStatus}
+              setReplyStatus={setReplyStatus}
+              handleReplyTicket={handleReplyTicket}
+              ROLE_LABELS={ROLE_LABELS}
+            />
           ) : (
             <ProfileEditForm user={user} API_URL={API_URL} token={token} onUpdateUser={onUpdateUser} />
           )}
@@ -636,6 +751,296 @@ function ProfileEditForm({ user, API_URL, token, onUpdateUser }) {
           {loading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : 'Lưu thay đổi'}
         </button>
       </form>
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────────
+// SUB-COMPONENTS FOR EXTENDED FEATURES
+// ────────────────────────────────────────────────────────────────────────
+
+function HistorySurveysTab({ historySurveys, historyLoading }) {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-xl font-extrabold" style={{ color: '#2d4771' }}>Lịch sử làm khảo sát</h2>
+        <p className="text-sm mt-0.5" style={{ color: '#6E9AE0' }}>Danh sách các khảo sát bạn đã tham gia thực hiện phản hồi</p>
+      </div>
+
+      {historyLoading ? (
+        <div className="h-56 flex items-center justify-center">
+          <div className="w-10 h-10 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: '#6E9AE0' }} />
+        </div>
+      ) : historySurveys.length === 0 ? (
+        <div className="p-12 rounded-3xl text-center border-2 border-dashed" style={{ borderColor: '#D2DBEA' }}>
+          <Clock size={40} className="mx-auto mb-4" style={{ color: '#A0AEC0' }} />
+          <h3 className="font-bold text-lg mb-1" style={{ color: '#2d4771' }}>Chưa làm khảo sát nào</h3>
+          <p className="text-sm" style={{ color: '#6E9AE0' }}>Lịch sử làm khảo sát của bạn sẽ xuất hiện ở đây sau khi bạn nộp phiếu phản hồi.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {historySurveys.map(s => (
+            <div key={s.id} className="rounded-3xl p-6 shadow-sm border flex flex-col justify-between transition-all" style={{ background: '#fff', borderColor: '#D2DBEA', borderLeftWidth: '4px', borderLeftColor: '#16a34a' }}>
+              <div>
+                <div className="flex justify-between items-start gap-2 mb-3">
+                  <span className="px-2.5 py-1 rounded-xl text-xs font-bold" style={{ background: '#f0fdf4', color: '#16a34a' }}>
+                    Đã hoàn thành
+                  </span>
+                  <span className="text-xs text-slate-400 font-medium">
+                    Nộp: {new Date(s.submittedAt).toLocaleString('vi-VN')}
+                  </span>
+                </div>
+                <h3 className="font-extrabold text-base mb-2 line-clamp-2" style={{ color: '#2d4771' }}>{s.title}</h3>
+                <p className="text-xs mb-4 line-clamp-2" style={{ color: '#487bc9' }}>{s.description || 'Không có mô tả'}</p>
+              </div>
+              <div className="pt-3" style={{ borderTop: '1px solid #D2DBEA', color: '#A0AEC0', fontSize: 12, fontWeight: 600 }}>
+                <span>✓ Phiếu khảo sát đã được hệ thống ghi nhận thành công.</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function UserTicketsTab({ tickets, ticketsLoading, ticketForm, setTicketForm, ticketSubmitting, handleCreateTicket }) {
+  const statusLabels = {
+    Pending: { label: 'Đang chờ', bg: '#FFFBEB', color: '#D97706' },
+    Processing: { label: 'Đang xử lý', bg: '#EFF6FF', color: '#2563EB' },
+    Resolved: { label: 'Đã giải quyết', bg: '#F0FDF4', color: '#16A34A' }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-xl font-extrabold" style={{ color: '#2d4771' }}>Báo lỗi & Hỗ trợ hệ thống</h2>
+        <p className="text-sm mt-0.5" style={{ color: '#6E9AE0' }}>Gửi thắc mắc hoặc báo cáo sự cố kỹ thuật trực tiếp cho Cán bộ quản lý trường</p>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+        {/* Form */}
+        <div className="lg:col-span-2 rounded-3xl p-6 border shadow-sm" style={{ background: '#fff', borderColor: '#D2DBEA', height: 'fit-content' }}>
+          <h3 className="font-extrabold text-base mb-4" style={{ color: '#2d4771' }}>Tạo yêu cầu mới</h3>
+          <form onSubmit={handleCreateTicket} className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold mb-1.5" style={{ color: '#487bc9' }}>Tiêu đề yêu cầu *</label>
+              <input
+                type="text"
+                value={ticketForm.subject}
+                onChange={e => setTicketForm({ ...ticketForm, subject: e.target.value })}
+                placeholder="Ví dụ: Lỗi không hiển thị nút Nộp bài, Sai mã sinh viên..."
+                className="w-full px-4 py-2.5 rounded-2xl border text-sm font-semibold outline-none"
+                style={{ background: '#F9FAFD', borderColor: '#D2DBEA', color: '#2d4771' }}
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold mb-1.5" style={{ color: '#487bc9' }}>Mô tả sự cố *</label>
+              <textarea
+                value={ticketForm.message}
+                onChange={e => setTicketForm({ ...ticketForm, message: e.target.value })}
+                placeholder="Mô tả cụ thể vấn đề bạn gặp phải để cán bộ hỗ trợ nhanh chóng nhất..."
+                rows={5}
+                className="w-full px-4 py-2.5 rounded-2xl border text-sm font-semibold outline-none resize-none"
+                style={{ background: '#F9FAFD', borderColor: '#D2DBEA', color: '#2d4771' }}
+                required
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={ticketSubmitting}
+              className="w-full py-3 text-white font-bold rounded-2xl shadow-md transition-all flex items-center justify-center gap-2"
+              style={{ background: 'linear-gradient(135deg, #6E9AE0, #487bc9)', opacity: ticketSubmitting ? 0.7 : 1 }}
+            >
+              {ticketSubmitting ? 'Đang gửi...' : 'Gửi yêu cầu hỗ trợ'}
+            </button>
+          </form>
+        </div>
+
+        {/* List */}
+        <div className="lg:col-span-3 space-y-4">
+          <h3 className="font-extrabold text-base" style={{ color: '#2d4771' }}>Yêu cầu đã gửi của bạn</h3>
+          {ticketsLoading ? (
+            <div className="h-44 flex items-center justify-center">
+              <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: '#6E9AE0' }} />
+            </div>
+          ) : tickets.length === 0 ? (
+            <div className="p-8 rounded-3xl text-center border-2 border-dashed" style={{ borderColor: '#D2DBEA' }}>
+              <HelpCircle size={30} className="mx-auto mb-3 text-slate-400" />
+              <p className="text-sm font-medium" style={{ color: '#6E9AE0' }}>Bạn chưa gửi yêu cầu hỗ trợ nào.</p>
+            </div>
+          ) : (
+            <div className="space-y-4 max-h-[500px] overflow-y-auto pr-1">
+              {tickets.map(t => {
+                const s = statusLabels[t.status] || { label: t.status, bg: '#F1F5F9', color: '#475569' };
+                return (
+                  <div key={t.id} className="p-5 rounded-2xl border bg-white shadow-xs space-y-3" style={{ borderColor: '#D2DBEA' }}>
+                    <div className="flex justify-between items-start gap-2">
+                      <span className="px-2 py-0.5 rounded-lg text-xs font-bold" style={{ background: s.bg, color: s.color }}>
+                        {s.label}
+                      </span>
+                      <span className="text-xs text-slate-400 font-medium">
+                        {new Date(t.createdAt).toLocaleDateString('vi-VN')}
+                      </span>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-sm" style={{ color: '#2d4771' }}>{t.subject}</h4>
+                      <p className="text-xs mt-1 text-slate-600 whitespace-pre-wrap">{t.message}</p>
+                    </div>
+                    {t.reply && (
+                      <div className="p-3.5 rounded-xl border" style={{ background: '#F8FAFC', borderColor: '#E2E8F0' }}>
+                        <p className="text-xs font-bold text-slate-800">Cán bộ phản hồi:</p>
+                        <p className="text-xs mt-1 text-slate-600 whitespace-pre-wrap">{t.reply}</p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ManagerTicketsTab({
+  tickets,
+  ticketsLoading,
+  activeReplyId,
+  setActiveReplyId,
+  replyText,
+  setReplyText,
+  replyStatus,
+  setReplyStatus,
+  handleReplyTicket,
+  ROLE_LABELS
+}) {
+  const statusLabels = {
+    Pending: { label: 'Đang chờ', bg: '#FFFBEB', color: '#D97706' },
+    Processing: { label: 'Đang xử lý', bg: '#EFF6FF', color: '#2563EB' },
+    Resolved: { label: 'Đã giải quyết', bg: '#F0FDF4', color: '#16A34A' }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-xl font-extrabold" style={{ color: '#2d4771' }}>Hộp thư báo lỗi & Hỗ trợ</h2>
+        <p className="text-sm mt-0.5" style={{ color: '#6E9AE0' }}>Tiếp nhận, xử lý và phản hồi phản ánh kỹ thuật từ sinh viên, giảng viên và đối tác</p>
+      </div>
+
+      {ticketsLoading ? (
+        <div className="h-56 flex items-center justify-center">
+          <div className="w-10 h-10 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: '#6E9AE0' }} />
+        </div>
+      ) : tickets.length === 0 ? (
+        <div className="p-12 rounded-3xl text-center border-2 border-dashed" style={{ borderColor: '#D2DBEA' }}>
+          <HelpCircle size={40} className="mx-auto mb-4" style={{ color: '#A0AEC0' }} />
+          <h3 className="font-bold text-lg mb-1" style={{ color: '#2d4771' }}>Hộp thư rỗng</h3>
+          <p className="text-sm" style={{ color: '#6E9AE0' }}>Hiện chưa có yêu cầu báo lỗi nào từ phía người dùng hệ thống.</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {tickets.map(t => {
+            const s = statusLabels[t.status] || { label: t.status, bg: '#F1F5F9', color: '#475569' };
+            const u = t.user || {};
+            return (
+              <div key={t.id} className="p-6 rounded-3xl border bg-white shadow-xs space-y-4" style={{ borderColor: '#D2DBEA' }}>
+                <div className="flex flex-wrap justify-between items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2.5 py-0.5 rounded-lg text-xs font-bold" style={{ background: s.bg, color: s.color }}>
+                      {s.label}
+                    </span>
+                    <span className="text-xs text-slate-400 font-semibold">
+                      Gửi ngày: {new Date(t.createdAt).toLocaleString('vi-VN')}
+                    </span>
+                  </div>
+                  
+                  {t.status !== 'Resolved' && (
+                    <button
+                      onClick={() => {
+                        if (activeReplyId === t.id) {
+                          setActiveReplyId(null);
+                        } else {
+                          setActiveReplyId(t.id);
+                          setReplyText(t.reply || '');
+                          setReplyStatus(t.status || 'Resolved');
+                        }
+                      }}
+                      className="px-3.5 py-1.5 text-xs font-bold rounded-xl transition-all"
+                      style={{ background: '#EEF4FD', color: '#6E9AE0' }}
+                    >
+                      {activeReplyId === t.id ? 'Hủy' : 'Phản hồi / Cập nhật'}
+                    </button>
+                  )}
+                </div>
+
+                {/* Submitter Info */}
+                <div className="p-3 rounded-2xl flex flex-wrap gap-x-6 gap-y-1 text-xs font-semibold" style={{ background: '#F8FAFC', color: '#64748B' }}>
+                  <span>👤 Người gửi: <strong style={{ color: '#334155' }}>{u.fullName || 'N/A'}</strong></span>
+                  <span>📧 Email: <strong style={{ color: '#334155' }}>{u.email || 'N/A'}</strong></span>
+                  <span>🆔 Mã: <strong style={{ color: '#334155' }}>{u.code || 'N/A'}</strong></span>
+                  {u.class && <span>Lớp: <strong style={{ color: '#334155' }}>{u.class}</strong></span>}
+                  {u.role && <span>Vai trò: <strong style={{ color: '#6E9AE0' }}>{ROLE_LABELS[u.role.name] || u.role.name}</strong></span>}
+                </div>
+
+                <div>
+                  <h4 className="font-extrabold text-sm" style={{ color: '#2d4771' }}>Tiêu đề: {t.subject}</h4>
+                  <p className="text-xs mt-1.5 text-slate-600 whitespace-pre-wrap">{t.message}</p>
+                </div>
+
+                {/* Reply display */}
+                {t.reply && activeReplyId !== t.id && (
+                  <div className="p-4 rounded-2xl border" style={{ background: '#F0FDF4', borderColor: '#BBF7D0' }}>
+                    <p className="text-xs font-bold text-green-800">Đã phản hồi:</p>
+                    <p className="text-xs mt-1 text-slate-600 whitespace-pre-wrap">{t.reply}</p>
+                  </div>
+                )}
+
+                {/* Reply Editor */}
+                {activeReplyId === t.id && (
+                  <div className="p-5 rounded-2xl border space-y-4" style={{ background: '#F8FAFC', borderColor: '#E2E8F0' }}>
+                    <h5 className="font-bold text-xs uppercase" style={{ color: '#475569' }}>Soạn phản hồi hỗ trợ</h5>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                      <div className="md:col-span-2">
+                        <label className="block text-xs font-bold mb-1" style={{ color: '#64748B' }}>Trạng thái xử lý</label>
+                        <select
+                          value={replyStatus}
+                          onChange={e => setReplyStatus(e.target.value)}
+                          className="px-3 py-1.5 text-xs font-bold rounded-xl border outline-none bg-white"
+                          style={{ borderColor: '#CBD5E1', color: '#475569' }}
+                        >
+                          <option value="Processing">Đang xử lý</option>
+                          <option value="Resolved">Đã giải quyết (Đóng ticket)</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold mb-1" style={{ color: '#64748B' }}>Nội dung phản hồi</label>
+                      <textarea
+                        value={replyText}
+                        onChange={e => setReplyText(e.target.value)}
+                        placeholder="Nhập câu trả lời phản hồi cho sinh viên..."
+                        rows={3}
+                        className="w-full px-4 py-2 rounded-xl border text-xs font-semibold outline-none resize-none bg-white"
+                        style={{ borderColor: '#CBD5E1', color: '#334155' }}
+                      />
+                    </div>
+                    <button
+                      onClick={() => handleReplyTicket(t.id)}
+                      className="px-5 py-2 text-white text-xs font-bold rounded-xl shadow-sm transition-all"
+                      style={{ background: 'linear-gradient(135deg, #6E9AE0, #487bc9)' }}
+                    >
+                      Lưu phản hồi & Cập nhật
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

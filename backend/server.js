@@ -10,6 +10,8 @@ const surveyRouter = require('./routes/surveys');
 const userRouter = require('./routes/users');
 const reportRouter = require('./routes/reports');
 const categoriesRouter = require('./routes/categories');
+const templatesRouter = require('./routes/templates');
+const ticketsRouter = require('./routes/tickets');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -31,10 +33,12 @@ app.get('/', (req, res) => {
 
 // API Routes
 app.use('/api/auth', authRouter);
+app.use('/api/surveys', templatesRouter);
 app.use('/api/surveys', surveyRouter);
 app.use('/api/users', userRouter);
 app.use('/api/reports', reportRouter);
 app.use('/api/categories', categoriesRouter);
+app.use('/api/tickets', ticketsRouter);
 
 // Fallback to index.html for SPA routing (e.g. if BrowserRouter is used)
 app.get('*', (req, res, next) => {
@@ -68,7 +72,8 @@ async function runManualMigrations(sequelize) {
         'ALTER TABLE "Surveys" ADD COLUMN IF NOT EXISTS "endDate" TIMESTAMP WITH TIME ZONE;',
         'ALTER TABLE "Surveys" ADD COLUMN IF NOT EXISTS "school" VARCHAR(255);',
         'ALTER TABLE "Surveys" ADD COLUMN IF NOT EXISTS "department" VARCHAR(255);',
-        'ALTER TABLE "Surveys" ADD COLUMN IF NOT EXISTS "class" VARCHAR(255);'
+        'ALTER TABLE "Surveys" ADD COLUMN IF NOT EXISTS "class" VARCHAR(255);',
+        'ALTER TABLE "Questions" ADD COLUMN IF NOT EXISTS "category" VARCHAR(255);'
       ];
       for (const q of queries) {
         try {
@@ -84,7 +89,8 @@ async function runManualMigrations(sequelize) {
         { table: 'Surveys', column: 'endDate', type: 'DATETIME' },
         { table: 'Surveys', column: 'school', type: 'VARCHAR(255)' },
         { table: 'Surveys', column: 'department', type: 'VARCHAR(255)' },
-        { table: 'Surveys', column: 'class', type: 'VARCHAR(255)' }
+        { table: 'Surveys', column: 'class', type: 'VARCHAR(255)' },
+        { table: 'Questions', column: 'category', type: 'VARCHAR(255)' }
       ];
       for (const m of migrations) {
         try {
@@ -221,10 +227,97 @@ async function startServer() {
       }
     };
 
-    // Run immediately
+    // Auto-send survey reminders to pending participants (deadline < 3 days)
+    const autoSendSurveyReminders = async () => {
+      try {
+        const { Survey, User, Role, Response } = require('./models');
+        const { sendEmail } = require('./utils/mailer');
+        const { Op } = require('sequelize');
+
+        const now = new Date();
+        const threeDaysLater = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+
+        // Find active surveys ending in less than 3 days
+        const closeSurveys = await Survey.findAll({
+          where: {
+            status: 'Active',
+            endDate: {
+              [Op.ne]: null,
+              [Op.gt]: now,
+              [Op.lte]: threeDaysLater
+            }
+          }
+        });
+
+        for (const s of closeSurveys) {
+          const submissions = await Response.findAll({
+            where: { surveyId: s.id },
+            attributes: ['userId']
+          });
+          const submittedUserIds = submissions.map(sub => sub.userId);
+
+          const userWhere = {
+            status: 'Active',
+            id: { [Op.notIn]: submittedUserIds }
+          };
+
+          if (s.targetAudience !== 'All') {
+            const role = await Role.findOne({ where: { name: s.targetAudience } });
+            if (role) userWhere.roleId = role.id;
+          } else {
+            const excludedRoles = await Role.findAll({ where: { name: ['Admin', 'Manager'] } });
+            const excludedIds = excludedRoles.map(r => r.id);
+            userWhere.roleId = { [Op.notIn]: excludedIds };
+          }
+
+          if (s.school) userWhere.school = s.school;
+          if (s.department) userWhere.department = s.department;
+          if (s.class) {
+            const classes = s.class.split(',').map(c => c.trim()).filter(Boolean);
+            if (classes.length > 0) {
+              userWhere.class = { [Op.in]: classes };
+            }
+          }
+
+          const pendingUsers = await User.findAll({
+            where: userWhere,
+            attributes: ['fullName', 'email']
+          });
+
+          for (const u of pendingUsers) {
+            const subject = `[Nhắc nhở] Khảo sát "${s.title}" sắp hết hạn!`;
+            const htmlContent = `
+              <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 25px; border: 1px solid #D2DBEA; border-radius: 16px; background-color: #F9FAFD;">
+                <h2 style="color: #ea580c; margin-top: 0; text-align: center;">Nhắc Nhở Khảo Sát</h2>
+                <hr style="border: 0; border-top: 1px solid #D2DBEA; margin: 20px 0;">
+                <p>Xin chào <strong>${u.fullName}</strong>,</p>
+                <p>Hệ thống ghi nhận bạn chưa tham gia khảo sát ý kiến: <strong>"${s.title}"</strong>.</p>
+                <p>Khảo sát này rất quan trọng để cải thiện chất lượng học tập và giảng dạy tại trường.</p>
+                <p style="color: #dc2626;"><strong>Hạn chót thực hiện:</strong> ${new Date(s.endDate).toLocaleString('vi-VN')}</p>
+                <p>Vui lòng đăng nhập vào hệ thống để hoàn thành khảo sát trước khi hết hạn.</p>
+                <hr style="border: 0; border-top: 1px solid #D2DBEA; margin: 20px 0;">
+                <p style="font-size: 12px; color: #A0AEC0; text-align: center; margin-bottom: 0;">Trường Đại học Kiến trúc Đà Nẵng © 2026</p>
+              </div>
+            `;
+            sendEmail(u.email, subject, `Khảo sát "${s.title}" của bạn sắp hết hạn. Vui lòng thực hiện sớm.`, htmlContent);
+          }
+
+          if (pendingUsers.length > 0) {
+            console.log(`[Auto-Reminder] Sent reminders to ${pendingUsers.length} users for survey "${s.title}".`);
+          }
+        }
+      } catch (err) {
+        console.error('[Auto-Reminder Error] Failed to send reminders:', err.message);
+      }
+    };
+
+    // Run immediately on startup
     await autoCloseExpiredSurveys();
-    // Run every 5 minutes
-    setInterval(autoCloseExpiredSurveys, 5 * 60 * 1000);
+    await autoSendSurveyReminders();
+    
+    // Set periodic jobs
+    setInterval(autoCloseExpiredSurveys, 5 * 60 * 1000); // 5 mins
+    setInterval(autoSendSurveyReminders, 24 * 60 * 60 * 1000); // 24 hours
 
     app.listen(PORT, () => {
       console.log(`==================================================`);

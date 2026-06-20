@@ -46,10 +46,10 @@ const STAKEHOLDERS = [
 ];
 
 const STATS = [
-  { number: '500+', label: 'Trường học tham gia', color: '#6E9AE0' },
-  { number: '12K+', label: 'Khảo sát hoàn tất', color: '#22c55e' },
+  { number: '4', label: 'Khoa đào tạo chính', color: '#6E9AE0' },
+  { number: '10K+', label: 'Lượt khảo sát hoàn tất', color: '#22c55e' },
   { number: '4', label: 'Nhóm đối tượng', color: '#f59e0b' },
-  { number: '98%', label: 'Mức độ hài lòng', color: '#8b5cf6' },
+  { number: '95%', label: 'Tỷ lệ phản hồi trực tuyến', color: '#8b5cf6' },
 ];
 
 function smoothScroll(e, href) {
@@ -107,7 +107,7 @@ export default function Landing({ user, onLogout }) {
       }}>
         <div className="px-4 md:px-10" style={{ maxWidth: 1280, margin: '0 auto', height: 72, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Link to="/" className="text-lg sm:text-xl md:text-2xl" style={{ fontWeight: 800, color: scrolled ? '#6E9AE0' : '#fff', letterSpacing: -0.5, textDecoration: 'none' }}>
-            🎓 Academic Synergy
+            🎓 ĐBCL - Đại học Kiến trúc Đà Nẵng
           </Link>
           <div className="hidden lg:flex" style={{ display: 'flex', gap: 32, alignItems: 'center' }}>
             {NAV_LINKS.map(link => (
@@ -223,7 +223,7 @@ export default function Landing({ user, onLogout }) {
               <span style={{ color: '#6E9AE0' }}>Sự Gắn Kết</span>
             </h2>
             <p style={{ color: '#718096', lineHeight: 1.8, marginBottom: 20, fontSize: 16 }}>
-              <b>Academic Synergy</b> là hệ thống khảo sát trực tuyến được xây dựng nhằm thu thập ý kiến từ các bên liên quan trong giáo dục — bao gồm sinh viên, giảng viên, cựu sinh viên và nhà tuyển dụng — để đánh giá và cải thiện chất lượng đào tạo đại học.
+              <b>Cổng Khảo sát ĐBCL</b> là hệ thống khảo sát trực tuyến chính thức của Trường Đại học Kiến trúc Đà Nẵng, được xây dựng nhằm thu thập ý kiến từ các bên liên quan — bao gồm sinh viên, giảng viên, cựu sinh viên và nhà tuyển dụng — để phục vụ công tác kiểm định và liên tục nâng cao chất lượng đào tạo của nhà trường.
             </p>
             <p style={{ color: '#718096', lineHeight: 1.8, fontSize: 16 }}>
               Hệ thống hỗ trợ 4 loại câu hỏi khảo sát linh hoạt (trắc nghiệm, thang điểm Likert, câu hỏi mở), theo dõi tiến trình phản hồi theo thời gian thực và xuất báo cáo chi tiết dạng Excel, Word và PDF.
@@ -372,11 +372,11 @@ export default function Landing({ user, onLogout }) {
       <footer style={{ background: '#0d1c2f', color: '#fff', padding: '48px 0' }}>
         <div className="footer-grid" style={{ maxWidth: 1280, margin: '0 auto', padding: '0 2.5rem', display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: 48, alignItems: 'start' }}>
           <div>
-            <div style={{ fontWeight: 800, fontSize: 20, color: '#6E9AE0', marginBottom: 12 }}>🎓 Academic Synergy</div>
+            <div style={{ fontWeight: 800, fontSize: 20, color: '#6E9AE0', marginBottom: 12 }}>🎓 Khảo sát ĐBCL - DAU</div>
             <p style={{ color: '#718096', fontSize: 14, lineHeight: 1.7, maxWidth: 300 }}>
-              Nền tảng khảo sát ý kiến các bên liên quan trong giáo dục — Kết nối để nâng cao chất lượng đào tạo.
+              Cổng khảo sát trực tuyến lấy ý kiến các bên liên quan phục vụ đảm bảo chất lượng và cải tiến đào tạo - Trường Đại học Kiến trúc Đà Nẵng.
             </p>
-            <p style={{ color: '#555', fontSize: 13, marginTop: 16 }}>© 2026 Academic Synergy. All rights reserved.</p>
+            <p style={{ color: '#555', fontSize: 13, marginTop: 16 }}>© 2026 Đại học Kiến trúc Đà Nẵng. All rights reserved.</p>
           </div>
           {[
             { title: 'Tài Nguyên', links: ['Chính sách bảo mật', 'Điều khoản sử dụng', 'Hỗ trợ'] },

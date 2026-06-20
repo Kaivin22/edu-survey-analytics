@@ -37,7 +37,7 @@ router.get('/', authenticateToken, async (req, res) => {
     const userId = req.user.id;
     const { createdOnly } = req.query;
 
-    if (createdOnly === 'true' || userRole === 'Admin' || userRole === 'Manager') {
+    if (createdOnly === 'true' || userRole === 'Manager') {
       const whereClause = {};
       if (createdOnly === 'true') {
         whereClause.createdBy = userId;
@@ -69,6 +69,28 @@ router.get('/', authenticateToken, async (req, res) => {
       }));
       return res.json(formatted);
     } else {
+      if (history === 'true') {
+        const userResponses = await Response.findAll({
+          where: { userId },
+          include: [{
+            model: Survey,
+            include: [{ model: Question, attributes: ['id'] }]
+          }],
+          order: [['submittedAt', 'DESC']]
+        });
+
+        const formattedHistory = userResponses.map(r => {
+          if (!r.Survey) return null;
+          return {
+            ...r.Survey.toJSON(),
+            questionCount: r.Survey.Questions ? r.Survey.Questions.length : 0,
+            submittedAt: r.submittedAt
+          };
+        }).filter(Boolean);
+
+        return res.json(formattedHistory);
+      }
+
       // Find the logged-in user to filter surveys targeted to their school/dept/class
       const user = await User.findByPk(userId);
 
@@ -174,7 +196,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
 
     // Check datetime validity for non-admin/manager users wanting to take the survey
     const userRole = req.user.role;
-    if (!['Admin', 'Manager'].includes(userRole)) {
+    if (userRole !== 'Manager') {
       const now = new Date();
       if (survey.startDate && new Date(survey.startDate) > now) {
         return res.status(400).json({ message: 'Khảo sát này chưa bắt đầu.' });
@@ -202,7 +224,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
 });
 
 // 3. Create Survey (Admin, Manager)
-router.post('/', authenticateToken, authorizeRoles(['Admin', 'Manager']), async (req, res) => {
+router.post('/', authenticateToken, authorizeRoles('Manager'), async (req, res) => {
   const transaction = await sequelize.transaction();
   try {
     const { title, description, targetAudience, status, startDate, endDate, questions, school, department, class: classVal } = req.body;
@@ -241,7 +263,8 @@ router.post('/', authenticateToken, authorizeRoles(['Admin', 'Manager']), async 
           text: q.text,
           type: q.type,
           required: q.required || false,
-          order: q.order || i
+          order: q.order || i,
+          category: q.category || null
         }, { transaction });
 
         if (q.options && Array.isArray(q.options) && ['single_choice', 'multiple_choice'].includes(q.type)) {
@@ -265,7 +288,7 @@ router.post('/', authenticateToken, authorizeRoles(['Admin', 'Manager']), async 
 });
 
 // 4. Update Survey (Admin, Manager)
-router.put('/:id', authenticateToken, authorizeRoles(['Admin', 'Manager']), async (req, res) => {
+router.put('/:id', authenticateToken, authorizeRoles('Manager'), async (req, res) => {
   const transaction = await sequelize.transaction();
   try {
     const { title, description, targetAudience, status, startDate, endDate, questions, school, department, class: classVal } = req.body;
@@ -314,7 +337,8 @@ router.put('/:id', authenticateToken, authorizeRoles(['Admin', 'Manager']), asyn
           text: q.text,
           type: q.type,
           required: q.required || false,
-          order: q.order || i
+          order: q.order || i,
+          category: q.category || null
         }, { transaction });
 
         if (q.options && Array.isArray(q.options) && ['single_choice', 'multiple_choice'].includes(q.type)) {
@@ -338,7 +362,7 @@ router.put('/:id', authenticateToken, authorizeRoles(['Admin', 'Manager']), asyn
 });
 
 // 5. Delete Survey (Admin, Manager)
-router.delete('/:id', authenticateToken, authorizeRoles(['Admin', 'Manager']), async (req, res) => {
+router.delete('/:id', authenticateToken, authorizeRoles('Manager'), async (req, res) => {
   try {
     const survey = await Survey.findByPk(req.params.id);
     if (!survey) {
@@ -430,7 +454,7 @@ router.post('/:id/submit', authenticateToken, async (req, res) => {
 });
 
 // 7. Get Survey Statistical Data (Admin, Manager)
-router.get('/:id/stats', authenticateToken, authorizeRoles(['Admin', 'Manager']), async (req, res) => {
+router.get('/:id/stats', authenticateToken, authorizeRoles('Manager'), async (req, res) => {
   try {
     const { Op } = require('sequelize');
     // Auto-close expired surveys
@@ -505,7 +529,7 @@ router.get('/:id/stats', authenticateToken, authorizeRoles(['Admin', 'Manager'])
       }
     } else {
       // "All" means all non-admin, non-manager roles
-      const excludedRoles = await Role.findAll({ where: { name: ['Admin', 'Manager'] } });
+      const excludedRoles = await Role.findAll({ where: { name: 'Manager' } });
       const excludedIds = excludedRoles.map(r => r.id);
       assignedWhere.roleId = { [Op.notIn]: excludedIds };
     }
@@ -617,6 +641,214 @@ router.get('/:id/stats', authenticateToken, authorizeRoles(['Admin', 'Manager'])
     });
   } catch (error) {
     res.status(500).json({ message: 'Lỗi lấy thống kê cuộc khảo sát.', error: error.message });
+  }
+});
+
+// 6. Get Survey Participants List (Admin, Manager only)
+router.get('/:id/participants', authenticateToken, authorizeRoles('Manager'), async (req, res) => {
+  try {
+    const surveyId = req.params.id;
+    const survey = await Survey.findByPk(surveyId);
+    if (!survey) {
+      return res.status(404).json({ message: 'Không tìm thấy khảo sát.' });
+    }
+
+    // Determine target users
+    const whereClause = {
+      status: 'Active' // only active users
+    };
+
+    // Filter by role/audience
+    if (survey.targetAudience !== 'All') {
+      const role = await Role.findOne({ where: { name: survey.targetAudience } });
+      if (role) {
+        whereClause.roleId = role.id;
+      }
+    } else {
+      // Exclude Admin and Manager roles from participants list
+      const excludedRoles = await Role.findAll({ where: { name: 'Manager' } });
+      const excludedIds = excludedRoles.map(r => r.id);
+      const { Op } = require('sequelize');
+      whereClause.roleId = { [Op.notIn]: excludedIds };
+    }
+
+    // Filter by school
+    if (survey.school) {
+      whereClause.school = survey.school;
+    }
+
+    // Filter by department
+    if (survey.department) {
+      whereClause.department = survey.department;
+    }
+
+    // Filter by class (comma-separated list in survey, match user's class if provided)
+    if (survey.class) {
+      const classes = survey.class.split(',').map(c => c.trim()).filter(Boolean);
+      if (classes.length > 0) {
+        const { Op } = require('sequelize');
+        whereClause.class = { [Op.in]: classes };
+      }
+    }
+
+    // Fetch all targeted users
+    const users = await User.findAll({
+      where: whereClause,
+      attributes: ['id', 'fullName', 'email', 'code', 'school', 'department', 'class'],
+      include: [{ model: Role, as: 'role', attributes: ['name'] }]
+    });
+
+    // Fetch all responses for this survey
+    const responses = await Response.findAll({
+      where: { surveyId },
+      attributes: ['userId', 'submittedAt']
+    });
+
+    // Create a map of user submissions
+    const submissionMap = new Map();
+    responses.forEach(r => {
+      submissionMap.set(r.userId, r.submittedAt);
+    });
+
+    // Map users to participant objects
+    const participants = users.map(u => {
+      const submittedAt = submissionMap.get(u.id);
+      return {
+        id: u.id,
+        fullName: u.fullName,
+        email: u.email,
+        code: u.code,
+        role: u.role ? u.role.name : 'Unknown',
+        school: u.school,
+        department: u.department,
+        class: u.class,
+        status: submittedAt ? 'submitted' : 'pending',
+        submittedAt: submittedAt || null
+      };
+    });
+
+    res.json(participants);
+  } catch (error) {
+    console.error('Error fetching survey participants:', error);
+    res.status(500).json({ message: 'Lỗi lấy danh sách tham gia khảo sát.', error: error.message });
+  }
+});
+
+// 7. Get Survey Decision Support Analytics (Admin, Manager only)
+router.get('/:id/decision-support', authenticateToken, authorizeRoles('Manager'), async (req, res) => {
+  try {
+    const surveyId = req.params.id;
+    const survey = await Survey.findByPk(surveyId, {
+      include: [
+        {
+          model: Question,
+          include: [{ model: Answer, attributes: ['answerText'] }]
+        }
+      ]
+    });
+
+    if (!survey) {
+      return res.status(404).json({ message: 'Không tìm thấy cuộc khảo sát.' });
+    }
+
+    // Group scores by category
+    const categoryScores = {};
+
+    survey.Questions.forEach(q => {
+      if (q.type === 'likert_scale') {
+        const cat = q.category || 'Khác';
+        if (!categoryScores[cat]) {
+          categoryScores[cat] = { sum: 0, count: 0, questions: [] };
+        }
+
+        let qSum = 0;
+        let qCount = 0;
+
+        if (q.Answers) {
+          q.Answers.forEach(a => {
+            const val = parseInt(a.answerText);
+            if (val >= 1 && val <= 5) {
+              qSum += val;
+              qCount += 1;
+            }
+          });
+        }
+
+        categoryScores[cat].sum += qSum;
+        categoryScores[cat].count += qCount;
+        categoryScores[cat].questions.push({
+          id: q.id,
+          text: q.text,
+          average: qCount > 0 ? parseFloat((qSum / qCount).toFixed(2)) : 0,
+          responsesCount: qCount
+        });
+      }
+    });
+
+    // standard recommendations map
+    const recommendationsMap = {
+      'Cơ sở vật chất': [
+        'Lập kế hoạch rà soát và nâng cấp thiết bị máy chiếu, Wi-Fi và hệ thống âm thanh tại các giảng đường có phản hồi kém.',
+        'Tăng cường tần suất dọn dẹp vệ sinh và kiểm tra thiết bị phòng học trước ca học.',
+        'Bổ sung trang thiết bị thực hành và nâng cấp phần mềm chuyên ngành tại phòng máy.'
+      ],
+      'Chương trình đào tạo': [
+        'Cập nhật giáo trình môn học và tăng cường bổ sung nguồn tài liệu điện tử trên hệ thống thư viện trường.',
+        'Rà soát và điều chỉnh đề cương chi tiết môn học để nâng cao tính thực tiễn, cập nhật công nghệ mới.',
+        'Mở rộng các hoạt động chia sẻ, giao lưu chuyên môn giữa giảng viên các bộ môn để thống nhất nội dung.'
+      ],
+      'Phương pháp giảng dạy': [
+        'Tổ chức các lớp tập huấn kỹ năng sư phạm hiện đại, đổi mới phương pháp giảng dạy lấy người học làm trung tâm.',
+        'Khuyến khích giảng viên tăng cường giao lưu, đặt câu hỏi gợi mở và dành thời gian thảo luận tại lớp.',
+        'Cung cấp phản hồi kết quả kiểm tra, đánh giá thường kỳ nhanh chóng và rõ ràng hơn cho người học.'
+      ],
+      'Dịch vụ hỗ trợ': [
+        'Ứng dụng số hóa và tự động hóa các thủ tục hành chính, giấy tờ sinh viên trực tuyến để rút ngắn thời gian xử lý.',
+        'Đẩy mạnh các hoạt động tư vấn tâm lý học đường, hỗ trợ hướng nghiệp và ngày hội việc làm liên kết doanh nghiệp.',
+        'Nâng cao tinh thần thái độ phục vụ của cán bộ văn phòng các khoa, phòng ban đối với người học.'
+      ],
+      'Khác': [
+        'Lên kế hoạch tổ chức đối thoại trực tiếp giữa Ban Giám hiệu/Khoa với người học để làm rõ các tồn đọng.',
+        'Tiếp tục theo dõi các chỉ số hài lòng trong cuộc khảo sát chu kỳ tiếp theo.'
+      ]
+    };
+
+    // Calculate averages and build recommendations
+    const results = Object.keys(categoryScores).map(cat => {
+      const { sum, count, questions } = categoryScores[cat];
+      const average = count > 0 ? parseFloat((sum / count).toFixed(2)) : 0;
+      
+      let status = 'Good'; // 'Strong', 'Good', 'Critical'
+      let recommendations = [];
+
+      if (count > 0) {
+        if (average >= 4.0) {
+          status = 'Strong';
+        } else if (average < 3.5) {
+          status = 'Critical';
+          recommendations = recommendationsMap[cat] || recommendationsMap['Khác'];
+        }
+      }
+
+      return {
+        category: cat,
+        average,
+        totalResponses: count,
+        questionsCount: questions.length,
+        status,
+        recommendations,
+        questions
+      };
+    });
+
+    res.json({
+      surveyId: survey.id,
+      surveyTitle: survey.title,
+      categoriesAnalysis: results
+    });
+  } catch (error) {
+    console.error('Error generating decision support analytics:', error);
+    res.status(500).json({ message: 'Lỗi tạo phân tích hỗ trợ ra quyết định.', error: error.message });
   }
 });
 
