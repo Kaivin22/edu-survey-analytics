@@ -34,6 +34,10 @@ function Dashboard({ user, onLogout, onUpdateUser }) {
   const [replyText, setReplyText] = useState('');
   const [replyStatus, setReplyStatus] = useState('Resolved');
 
+  const [editingTicket, setEditingTicket] = useState(null);
+  const [editTicketForm, setEditTicketForm] = useState({ subject: '', message: '' });
+  const [ticketEditing, setTicketEditing] = useState(false);
+
   useEffect(() => {
     fetchSurveys();
     fetchNotifications();
@@ -130,9 +134,79 @@ function Dashboard({ user, onLogout, onUpdateUser }) {
       } else {
         alert(data.message || 'Lỗi phản hồi.');
       }
-    } catch (err) {
-      console.error(err);
-      alert('Lỗi kết nối.');
+    } catch (e) {
+      console.error(e);
+      alert('Lỗi kết nối mạng.');
+    }
+  };
+
+  const handleDeleteHistory = async (responseId) => {
+    if (!confirm('Bạn có chắc chắn muốn xóa lịch sử làm khảo sát này? Cuộc khảo sát này sẽ quay trở lại danh sách cần thực hiện.')) return;
+    try {
+      const res = await fetch(`${API_URL}/surveys/responses/${responseId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert('Xóa lịch sử khảo sát thành công!');
+        fetchHistorySurveys();
+        fetchSurveys();
+      } else {
+        alert(data.message || 'Lỗi xóa lịch sử khảo sát.');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Lỗi kết nối mạng.');
+    }
+  };
+
+  const handleDeleteTicket = async (ticketId) => {
+    if (!confirm('Bạn có chắc chắn muốn xóa yêu cầu hỗ trợ này?')) return;
+    try {
+      const res = await fetch(`${API_URL}/tickets/${ticketId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        alert('Đã xóa yêu cầu hỗ trợ.');
+        fetchTickets();
+      } else {
+        const data = await res.json();
+        alert(data.message || 'Lỗi xóa yêu cầu.');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Lỗi kết nối mạng.');
+    }
+  };
+
+  const handleEditTicketSubmit = async (e) => {
+    e.preventDefault();
+    if (!editTicketForm.subject || !editTicketForm.message) {
+      alert('Vui lòng nhập đầy đủ thông tin.');
+      return;
+    }
+    setTicketEditing(true);
+    try {
+      const res = await fetch(`${API_URL}/tickets/${editingTicket.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(editTicketForm)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert('Cập nhật yêu cầu hỗ trợ thành công!');
+        setEditingTicket(null);
+        fetchTickets();
+      } else {
+        alert(data.message || 'Lỗi cập nhật yêu cầu.');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Lỗi kết nối mạng.');
+    } finally {
+      setTicketEditing(false);
     }
   };
 
@@ -458,7 +532,7 @@ function Dashboard({ user, onLogout, onUpdateUser }) {
               )}
             </div>
           ) : activeTab === 'history' ? (
-            <HistorySurveysTab historySurveys={historySurveys} historyLoading={historyLoading} />
+            <HistorySurveysTab historySurveys={historySurveys} historyLoading={historyLoading} onDeleteHistory={handleDeleteHistory} />
           ) : activeTab === 'tickets' ? (
             <UserTicketsTab
               tickets={tickets}
@@ -467,6 +541,13 @@ function Dashboard({ user, onLogout, onUpdateUser }) {
               setTicketForm={setTicketForm}
               ticketSubmitting={ticketSubmitting}
               handleCreateTicket={handleCreateTicket}
+              handleDeleteTicket={handleDeleteTicket}
+              editingTicket={editingTicket}
+              setEditingTicket={setEditingTicket}
+              editTicketForm={editTicketForm}
+              setEditTicketForm={setEditTicketForm}
+              ticketEditing={ticketEditing}
+              handleEditTicketSubmit={handleEditTicketSubmit}
             />
           ) : activeTab === 'tickets-manage' ? (
             <ManagerTicketsTab
@@ -479,6 +560,7 @@ function Dashboard({ user, onLogout, onUpdateUser }) {
               replyStatus={replyStatus}
               setReplyStatus={setReplyStatus}
               handleReplyTicket={handleReplyTicket}
+              handleDeleteTicket={handleDeleteTicket}
               ROLE_LABELS={ROLE_LABELS}
             />
           ) : (
@@ -759,7 +841,7 @@ function ProfileEditForm({ user, API_URL, token, onUpdateUser }) {
 // SUB-COMPONENTS FOR EXTENDED FEATURES
 // ────────────────────────────────────────────────────────────────────────
 
-function HistorySurveysTab({ historySurveys, historyLoading }) {
+function HistorySurveysTab({ historySurveys, historyLoading, onDeleteHistory }) {
   return (
     <div className="space-y-6">
       <div>
@@ -780,15 +862,26 @@ function HistorySurveysTab({ historySurveys, historyLoading }) {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {historySurveys.map(s => (
-            <div key={s.id} className="rounded-3xl p-6 shadow-sm border flex flex-col justify-between transition-all" style={{ background: '#fff', borderColor: '#D2DBEA', borderLeftWidth: '4px', borderLeftColor: '#16a34a' }}>
+            <div key={s.id || s.responseId} className="rounded-3xl p-6 shadow-sm border flex flex-col justify-between transition-all" style={{ background: '#fff', borderColor: '#D2DBEA', borderLeftWidth: '4px', borderLeftColor: '#16a34a' }}>
               <div>
                 <div className="flex justify-between items-start gap-2 mb-3">
                   <span className="px-2.5 py-1 rounded-xl text-xs font-bold" style={{ background: '#f0fdf4', color: '#16a34a' }}>
                     Đã hoàn thành
                   </span>
-                  <span className="text-xs text-slate-400 font-medium">
-                    Nộp: {new Date(s.submittedAt).toLocaleString('vi-VN')}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-slate-400 font-medium">
+                      Nộp: {new Date(s.submittedAt).toLocaleString('vi-VN')}
+                    </span>
+                    {s.responseId && (
+                      <button
+                        onClick={() => onDeleteHistory(s.responseId)}
+                        className="p-1.5 text-red-500 hover:bg-slate-100 rounded-lg transition-all"
+                        title="Xóa kết quả nộp bài"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <h3 className="font-extrabold text-base mb-2 line-clamp-2" style={{ color: '#2d4771' }}>{s.title}</h3>
                 <p className="text-xs mb-4 line-clamp-2" style={{ color: '#487bc9' }}>{s.description || 'Không có mô tả'}</p>
@@ -804,7 +897,21 @@ function HistorySurveysTab({ historySurveys, historyLoading }) {
   );
 }
 
-function UserTicketsTab({ tickets, ticketsLoading, ticketForm, setTicketForm, ticketSubmitting, handleCreateTicket }) {
+function UserTicketsTab({
+  tickets,
+  ticketsLoading,
+  ticketForm,
+  setTicketForm,
+  ticketSubmitting,
+  handleCreateTicket,
+  handleDeleteTicket,
+  editingTicket,
+  setEditingTicket,
+  editTicketForm,
+  setEditTicketForm,
+  ticketEditing,
+  handleEditTicketSubmit
+}) {
   const statusLabels = {
     Pending: { label: 'Đang chờ', bg: '#FFFBEB', color: '#D97706' },
     Processing: { label: 'Đang xử lý', bg: '#EFF6FF', color: '#2563EB' },
@@ -880,9 +987,32 @@ function UserTicketsTab({ tickets, ticketsLoading, ticketForm, setTicketForm, ti
                       <span className="px-2 py-0.5 rounded-lg text-xs font-bold" style={{ background: s.bg, color: s.color }}>
                         {s.label}
                       </span>
-                      <span className="text-xs text-slate-400 font-medium">
-                        {new Date(t.createdAt).toLocaleDateString('vi-VN')}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-slate-400 font-medium">
+                          {new Date(t.createdAt).toLocaleDateString('vi-VN')}
+                        </span>
+                        <div className="flex gap-1 ml-2">
+                          {t.status === 'Pending' && (
+                            <button
+                              onClick={() => {
+                                setEditingTicket(t);
+                                setEditTicketForm({ subject: t.subject, message: t.message });
+                              }}
+                              className="p-1 text-amber-500 hover:bg-slate-100 rounded-lg transition-all"
+                              title="Sửa"
+                            >
+                              <Edit size={14} />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleDeleteTicket(t.id)}
+                            className="p-1 text-red-500 hover:bg-slate-100 rounded-lg transition-all"
+                            title="Xóa"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
                     </div>
                     <div>
                       <h4 className="font-bold text-sm" style={{ color: '#2d4771' }}>{t.subject}</h4>
@@ -901,6 +1031,55 @@ function UserTicketsTab({ tickets, ticketsLoading, ticketForm, setTicketForm, ti
           )}
         </div>
       </div>
+
+      {/* Edit Ticket Modal */}
+      {editingTicket && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl border shadow-2xl max-w-md w-full p-6 space-y-4" style={{ borderColor: '#D2DBEA' }}>
+            <div className="flex justify-between items-center pb-3 border-b border-slate-100">
+              <h3 className="font-extrabold text-lg" style={{ color: '#2d4771' }}>Chỉnh sửa Yêu cầu</h3>
+              <button onClick={() => setEditingTicket(null)} className="text-slate-400 hover:text-slate-600 font-bold">✕</button>
+            </div>
+            <form onSubmit={handleEditTicketSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold mb-1.5" style={{ color: '#487bc9' }}>Tiêu đề yêu cầu *</label>
+                <input
+                  type="text"
+                  value={editTicketForm.subject}
+                  onChange={e => setEditTicketForm({ ...editTicketForm, subject: e.target.value })}
+                  placeholder="Tiêu đề..."
+                  className="w-full px-4 py-2.5 rounded-2xl border text-sm font-semibold outline-none"
+                  style={{ background: '#F9FAFD', borderColor: '#D2DBEA', color: '#2d4771' }}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold mb-1.5" style={{ color: '#487bc9' }}>Mô tả sự cố *</label>
+                <textarea
+                  value={editTicketForm.message}
+                  onChange={e => setEditTicketForm({ ...editTicketForm, message: e.target.value })}
+                  placeholder="Nội dung..."
+                  rows={5}
+                  className="w-full px-4 py-2.5 rounded-2xl border text-sm font-semibold outline-none resize-none"
+                  style={{ background: '#F9FAFD', borderColor: '#D2DBEA', color: '#2d4771' }}
+                  required
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2 text-xs font-bold">
+                <button type="button" onClick={() => setEditingTicket(null)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl">Hủy</button>
+                <button
+                  type="submit"
+                  disabled={ticketEditing}
+                  className="px-4 py-2 text-white rounded-xl shadow-md"
+                  style={{ background: 'linear-gradient(135deg, #6E9AE0, #487bc9)', opacity: ticketEditing ? 0.7 : 1 }}
+                >
+                  {ticketEditing ? 'Đang lưu...' : 'Lưu lại'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -915,6 +1094,7 @@ function ManagerTicketsTab({
   replyStatus,
   setReplyStatus,
   handleReplyTicket,
+  handleDeleteTicket,
   ROLE_LABELS
 }) {
   const statusLabels = {
@@ -955,6 +1135,13 @@ function ManagerTicketsTab({
                     <span className="text-xs text-slate-400 font-semibold">
                       Gửi ngày: {new Date(t.createdAt).toLocaleString('vi-VN')}
                     </span>
+                    <button
+                      onClick={() => handleDeleteTicket(t.id)}
+                      className="p-1 text-red-500 hover:bg-slate-100 rounded-lg transition-all ml-2"
+                      title="Xóa yêu cầu hỗ trợ này"
+                    >
+                      <Trash2 size={14} />
+                    </button>
                   </div>
                   
                   {t.status !== 'Resolved' && (

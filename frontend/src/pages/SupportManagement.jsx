@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, MessageSquare, Clock, CheckCircle, AlertCircle, HelpCircle, Send, User } from 'lucide-react';
+import { ArrowLeft, MessageSquare, Clock, CheckCircle, AlertCircle, HelpCircle, Send, User, Trash2 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 const ROLE_LABELS = { Student: 'Sinh viên', Lecturer: 'Giảng viên', Alumnus: 'Cựu sinh viên', Employer: 'Nhà tuyển dụng', Manager: 'Cán bộ quản lý' };
@@ -88,6 +88,28 @@ function SupportManagement({ user, onLogout }) {
       alert('Lỗi kết nối mạng.');
     } finally {
       setSubmittingMap(prev => ({ ...prev, [id]: false }));
+    }
+  };
+
+  const handleDeleteTicket = async (id) => {
+    if (!confirm('Bạn có chắc chắn muốn xóa phiếu hỗ trợ này? Hành động này không thể hoàn tác.')) {
+      return;
+    }
+    try {
+      const res = await fetch(`${API_URL}/tickets/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert('Xóa phiếu hỗ trợ thành công!');
+        fetchTickets();
+      } else {
+        alert(data.message || 'Lỗi khi xóa phiếu hỗ trợ.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Lỗi kết nối mạng.');
     }
   };
 
@@ -285,7 +307,7 @@ function SupportManagement({ user, onLogout }) {
                       </div>
                     </div>
                   ) : (
-                    <div className="flex justify-end pt-2 border-t border-dashed border-slate-100">
+                    <div className="flex justify-end gap-2 pt-2 border-t border-dashed border-slate-100">
                       <button
                         onClick={() => {
                           setActiveReplyId(t.id);
@@ -295,6 +317,13 @@ function SupportManagement({ user, onLogout }) {
                       >
                         <MessageSquare size={13} />
                         {t.reply ? 'Chỉnh sửa phản hồi' : 'Xử lý & Gửi phản hồi'}
+                      </button>
+                      <button
+                        onClick={() => handleDeleteTicket(t.id)}
+                        className="px-4 py-2 bg-[#FFF5F5] hover:bg-[#FEE2E2] rounded-xl text-xs font-bold text-[#DC2626] border-none cursor-pointer transition-all flex items-center gap-1"
+                      >
+                        <Trash2 size={13} />
+                        Xóa phiếu
                       </button>
                     </div>
                   )}

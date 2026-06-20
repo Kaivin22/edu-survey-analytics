@@ -85,4 +85,57 @@ router.put('/:id/reply', authenticateToken, authorizeRoles('Manager'), async (re
   }
 });
 
+// 4. Edit a Support Ticket (User/Sender can edit, Manager can edit)
+router.put('/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { subject, message } = req.body;
+
+    if (!subject || !message) {
+      return res.status(400).json({ message: 'Vui lòng cung cấp đầy đủ Tiêu đề và Nội dung.' });
+    }
+
+    const ticket = await SupportTicket.findByPk(id);
+    if (!ticket) {
+      return res.status(404).json({ message: 'Không tìm thấy yêu cầu hỗ trợ.' });
+    }
+
+    // Check permissions
+    if (req.user.id !== ticket.userId && req.user.role !== 'Manager') {
+      return res.status(403).json({ message: 'Bạn không có quyền sửa đổi yêu cầu hỗ trợ này.' });
+    }
+
+    ticket.subject = subject;
+    ticket.message = message;
+    await ticket.save();
+
+    res.json({ message: 'Cập nhật yêu cầu hỗ trợ thành công!', ticket });
+  } catch (error) {
+    console.error('Error updating support ticket:', error);
+    res.status(500).json({ message: 'Lỗi hệ thống khi cập nhật yêu cầu.' });
+  }
+});
+
+// 5. Delete a Support Ticket (User can delete own, Manager can delete any)
+router.delete('/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const ticket = await SupportTicket.findByPk(id);
+    if (!ticket) {
+      return res.status(404).json({ message: 'Không tìm thấy yêu cầu hỗ trợ.' });
+    }
+
+    // Check permissions
+    if (req.user.id !== ticket.userId && req.user.role !== 'Manager') {
+      return res.status(403).json({ message: 'Bạn không có quyền xóa yêu cầu hỗ trợ này.' });
+    }
+
+    await ticket.destroy();
+    res.json({ message: 'Xóa yêu cầu hỗ trợ thành công!' });
+  } catch (error) {
+    console.error('Error deleting support ticket:', error);
+    res.status(500).json({ message: 'Lỗi hệ thống khi xóa yêu cầu.' });
+  }
+});
+
 module.exports = router;

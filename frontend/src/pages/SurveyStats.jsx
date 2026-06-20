@@ -100,10 +100,12 @@ function ExportDropdown({ surveyId, token, filters }) {
   );
 }
 
-function FilterBar({ filters, onChange, onClear, dynamicSchools = [], dynamicDepartments = {}, dynamicClasses = {} }) {
+function FilterBar({ filters, onChange, onClear, dynamicSchools = [], dynamicDepartments = {}, dynamicClasses = {}, targetAudience }) {
   const depts = filters.school ? (dynamicDepartments[filters.school] || []) : [];
   const classes = filters.department ? (dynamicClasses[filters.department] || []) : [];
   const hasFilter = filters.school || filters.department || filters.class;
+  const showClassFilter = !targetAudience || ['Student', 'Alumnus', 'All'].includes(targetAudience);
+  const showDeptFilter = !targetAudience || ['Student', 'Lecturer', 'Alumnus', 'All'].includes(targetAudience);
 
   const selStyle = {
     padding: '7px 14px', borderRadius: 12, border: '1.5px solid #D2DBEA',
@@ -118,22 +120,24 @@ function FilterBar({ filters, onChange, onClear, dynamicSchools = [], dynamicDep
         <span className="text-xs font-extrabold text-[#487bc9]">Bộ lọc:</span>
       </div>
 
+      {showDeptFilter && (
+        <select value={filters.department} onChange={e => onChange({ ...filters, department: e.target.value, class: '' })} style={{ ...selStyle, opacity: depts.length ? 1 : 0.4 }} disabled={!depts.length}>
+          <option value="">📚 Tất cả khoa</option>
+          {depts.map(d => <option key={d} value={d}>{d}</option>)}
+        </select>
+      )}
 
-
-      <select value={filters.department} onChange={e => onChange({ ...filters, department: e.target.value, class: '' })} style={{ ...selStyle, opacity: depts.length ? 1 : 0.4 }} disabled={!depts.length}>
-        <option value="">📚 Tất cả khoa</option>
-        {depts.map(d => <option key={d} value={d}>{d}</option>)}
-      </select>
-
-      <select
-        value={filters.class}
-        onChange={e => onChange({ ...filters, class: e.target.value })}
-        style={{ ...selStyle, opacity: classes.length ? 1 : 0.4 }}
-        disabled={!filters.department}
-      >
-        <option value="">🎓 Tất cả lớp</option>
-        {classes.map(cl => <option key={cl} value={cl}>{cl}</option>)}
-      </select>
+      {showClassFilter && (
+        <select
+          value={filters.class}
+          onChange={e => onChange({ ...filters, class: e.target.value })}
+          style={{ ...selStyle, opacity: classes.length ? 1 : 0.4 }}
+          disabled={!filters.department}
+        >
+          <option value="">🎓 Tất cả lớp</option>
+          {classes.map(cl => <option key={cl} value={cl}>{cl}</option>)}
+        </select>
+      )}
 
       {hasFilter && (
         <button onClick={onClear} className="flex items-center gap-1 px-3 py-1.5 rounded-xl border border-red-200 bg-red-50 text-red-600 text-xs font-bold cursor-pointer transition-all hover:bg-red-100">
@@ -344,6 +348,7 @@ function SurveyStats({ user }) {
             dynamicSchools={dynamicSchools}
             dynamicDepartments={dynamicDepartments}
             dynamicClasses={dynamicClasses}
+            targetAudience={stats?.targetAudience}
           />
         )}
 
