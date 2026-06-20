@@ -71,6 +71,63 @@ async function seed() {
       status: 'Active'
     });
     console.log('Manager User seeded.');
+
+    // Seed Demo Users
+    console.log('Seeding demo users...');
+    await User.bulkCreate([
+      {
+        email: 'student1@edu.vn',
+        password: hashedPassword,
+        fullName: 'Trần Kim Liên',
+        code: 'SV_01',
+        roleId: 3, // Student
+        school: 'Trường Đại học Kiến trúc Đà Nẵng',
+        department: 'Khoa Công nghệ thông tin',
+        class: '22CT1',
+        status: 'Active'
+      },
+      {
+        email: 'student2@edu.vn',
+        password: hashedPassword,
+        fullName: 'Nguyễn Văn Tuấn',
+        code: 'SV_02',
+        roleId: 3, // Student
+        school: 'Trường Đại học Kiến trúc Đà Nẵng',
+        department: 'Khoa Công nghệ thông tin',
+        class: '22CT2',
+        status: 'Active'
+      },
+      {
+        email: 'lecturer1@edu.vn',
+        password: hashedPassword,
+        fullName: 'Phạm Giảng Viên',
+        code: 'GV_01',
+        roleId: 4, // Lecturer
+        school: 'Trường Đại học Kiến trúc Đà Nẵng',
+        department: 'Khoa Công nghệ thông tin',
+        status: 'Active'
+      },
+      {
+        email: 'alumnus1@edu.vn',
+        password: hashedPassword,
+        fullName: 'Hoàng Cựu SV',
+        code: 'CSV_01',
+        roleId: 5, // Alumnus
+        school: 'Trường Đại học Kiến trúc Đà Nẵng',
+        department: 'Khoa Công nghệ thông tin',
+        status: 'Active'
+      },
+      {
+        email: 'employer1@edu.vn',
+        password: hashedPassword,
+        fullName: 'FPT Software',
+        code: 'NTD_01',
+        roleId: 6, // Employer
+        school: 'Trường Đại học Kiến trúc Đà Nẵng',
+        status: 'Active'
+      }
+    ]);
+    console.log('Demo Users seeded.');
     console.log('ALL DB SEEDING COMPLETED SUCCESSFULLY! 🎉');
   } catch (error) {
     console.error('Error seeding database:', error);

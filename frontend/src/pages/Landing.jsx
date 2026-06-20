@@ -10,38 +10,71 @@ const NAV_LINKS = [
   { label: 'Liên hệ', href: '#contact' },
 ];
 
-const STAKEHOLDERS = [
+const SURVEY_TEMPLATES = [
   {
+    id: 'student_course',
     icon: '🎓',
-    title: 'Sinh viên',
-    role: 'Student',
-    desc: 'Chia sẻ trải nghiệm học tập, phản ánh chất lượng giảng dạy và điều kiện học tập để cùng nhà trường không ngừng cải thiện môi trường giáo dục.',
+    title: 'Khảo sát ý kiến Sinh viên về môn học',
+    target: 'Sinh viên',
+    desc: 'Khảo sát nhằm thu thập ý kiến phản hồi của sinh viên về chất lượng giảng dạy, tài liệu và nội dung học phần nhằm cải tiến chất lượng đào tạo.',
     color: '#6E9AE0',
-    bg: 'rgba(110,154,224,0.12)'
+    bg: 'rgba(110,154,224,0.12)',
+    questions: [
+      'Giảng viên lên lớp đúng giờ và thực hiện đầy đủ thời gian quy định.',
+      'Phương pháp giảng dạy của giảng viên giúp sinh viên dễ tiếp thu bài học.',
+      'Giảng viên nhiệt tình giải đáp thắc mắc và hỗ trợ sinh viên trong quá trình học.',
+      'Tài liệu học tập, giáo trình môn học được cung cấp đầy đủ và có ích.',
+      'Nội dung học phần thiết thực, bổ ích cho chuyên ngành của bạn.',
+      'Góp ý hoặc đề xuất khác của bạn để cải tiến môn học này.'
+    ]
   },
   {
+    id: 'lecturer_facilities',
     icon: '📚',
-    title: 'Giảng viên',
-    role: 'Lecturer',
-    desc: 'Đóng góp ý kiến về chương trình đào tạo, phương pháp giảng dạy và nguồn lực hỗ trợ để nâng cao hiệu quả truyền đạt kiến thức.',
+    title: 'Khảo sát ý kiến Giảng viên về điều kiện giảng dạy',
+    target: 'Giảng viên',
+    desc: 'Thu thập ý kiến của giảng viên về cơ sở vật chất giảng đường, trang thiết bị kỹ thuật hỗ trợ và môi trường làm việc tại trường.',
     color: '#22c55e',
-    bg: 'rgba(34,197,94,0.10)'
+    bg: 'rgba(34,197,94,0.10)',
+    questions: [
+      'Phòng học được vệ sinh sạch sẽ, đủ ánh sáng và thoáng mát.',
+      'Thiết bị giảng dạy (máy chiếu, âm thanh, Wi-Fi, bảng viết) hoạt động ổn định.',
+      'Công tác hỗ trợ kỹ thuật tại các khu giảng đường nhanh chóng và kịp thời.',
+      'Các chính sách hỗ trợ nghiên cứu khoa học và giảng dạy của nhà trường phù hợp.',
+      'Ý kiến đóng góp hoặc đề xuất cải thiện cơ sở vật chất phòng học của giảng viên.'
+    ]
   },
   {
+    id: 'alumni_program',
     icon: '🏢',
-    title: 'Cựu sinh viên',
-    role: 'Alumnus',
-    desc: 'Phản ánh về tính thực tiễn của chương trình đào tạo và mức độ phù hợp với yêu cầu công việc thực tế sau khi tốt nghiệp.',
+    title: 'Khảo sát Cựu sinh viên về chất lượng chương trình đào tạo',
+    target: 'Cựu sinh viên',
+    desc: 'Khảo sát đánh giá mức độ phù hợp và hữu ích của chương trình đào tạo đối với công việc thực tế của cựu sinh viên sau khi tốt nghiệp.',
     color: '#f59e0b',
-    bg: 'rgba(245,158,11,0.10)'
+    bg: 'rgba(245,158,11,0.10)',
+    questions: [
+      'Kiến thức chuyên môn được trang bị giúp bạn nhanh chóng tiếp cận và làm quen với công việc.',
+      'Các kỹ năng thực hành nghề nghiệp được đào tạo đáp ứng tốt yêu cầu công việc.',
+      'Các kỹ năng mềm (giao tiếp, làm việc nhóm, thuyết trình) được rèn luyện tốt khi học tại trường.',
+      'Hoạt động hỗ trợ giới thiệu việc làm và hướng nghiệp của nhà trường có hiệu quả.',
+      'Đóng góp ý kiến của cựu sinh viên để cải tiến và phát triển chương trình đào tạo tốt hơn.'
+    ]
   },
   {
+    id: 'employer_evaluation',
     icon: '💼',
-    title: 'Nhà tuyển dụng',
-    role: 'Employer',
-    desc: 'Đánh giá chất lượng sinh viên tốt nghiệp và đề xuất các kỹ năng, kiến thức cần thiết để sinh viên đáp ứng tốt hơn nhu cầu thị trường lao động.',
+    title: 'Khảo sát Nhà tuyển dụng về chất lượng sinh viên tốt nghiệp',
+    target: 'Nhà tuyển dụng',
+    desc: 'Ý kiến đánh giá từ phía doanh nghiệp về năng lực chuyên môn, thái độ làm việc và kỹ năng thích ứng của sinh viên tốt nghiệp khi được tuyển dụng.',
     color: '#8b5cf6',
-    bg: 'rgba(139,92,246,0.10)'
+    bg: 'rgba(139,92,246,0.10)',
+    questions: [
+      'Kiến thức chuyên môn của sinh viên tốt nghiệp đáp ứng yêu cầu công việc thực tế tại cơ quan/doanh nghiệp.',
+      'Khả năng ứng dụng công nghệ thông tin và ngoại ngữ của sinh viên trong công việc tốt.',
+      'Sinh viên có ý thức tổ chức kỷ luật, tác phong làm việc chuyên nghiệp và tuân thủ quy định.',
+      'Khả năng làm việc nhóm, kỹ năng giao tiếp và giải quyết vấn đề của sinh viên tốt.',
+      'Doanh nghiệp mong muốn nhà trường bổ sung hoặc tập trung đào tạo thêm các kỹ năng/kiến thức nào?'
+    ]
   }
 ];
 
@@ -64,6 +97,7 @@ export default function Landing({ user, onLogout }) {
   const [loadingContact, setLoadingContact] = useState(false);
   const [contactError, setContactError] = useState('');
   const [formSent, setFormSent] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 50);
@@ -247,38 +281,46 @@ export default function Landing({ user, onLogout }) {
             ))}
           </div>
         </div>
-      </section>
-
-      {/* ─── STAKEHOLDERS SECTION ─── */}
+      </section>      {/* ─── SURVEY TEMPLATES SECTION ─── */}
       <section id="stakeholders" style={{ padding: '100px 0', background: '#fff' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 2.5rem' }}>
           <div style={{ textAlign: 'center', marginBottom: 60 }}>
             <div style={{ display: 'inline-block', background: 'rgba(110,154,224,0.12)', color: '#6E9AE0', borderRadius: 999, padding: '6px 16px', fontSize: 13, fontWeight: 700, marginBottom: 20, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-              Đối Tượng Tham Gia
+              Biểu mẫu Khảo sát
             </div>
-            <h2 style={{ fontSize: 38, fontWeight: 800, color: '#0d1c2f' }}>Các Bên Liên Quan</h2>
-            <p style={{ color: '#718096', fontSize: 16, marginTop: 12, maxWidth: 480, margin: '12px auto 0' }}>
-              Mỗi cá nhân đều đóng góp một phần quan trọng vào sự thành công của hệ thống giáo dục.
+            <h2 style={{ fontSize: 38, fontWeight: 800, color: '#0d1c2f' }}>Các Biểu Mẫu Khảo Sát Theo Đối Tượng</h2>
+            <p style={{ color: '#718096', fontSize: 16, marginTop: 12, maxWidth: 580, margin: '12px auto 0', lineHeight: 1.6 }}>
+              Hệ thống khảo sát phục vụ ĐBCL được thiết kế dựa trên các biểu mẫu chuẩn hóa dành riêng cho từng nhóm đối tượng liên quan.
             </p>
           </div>
-          <div className="stakeholders-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 24 }}>
-            {STAKEHOLDERS.map(s => (
-              <div key={s.title} style={{ background: '#F9FAFD', borderRadius: 20, padding: '32px 24px', border: '1px solid #D2DBEA', transition: 'all 0.3s ease', cursor: 'default' }}
-                onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-6px)'; e.currentTarget.style.boxShadow = `0 12px 30px ${s.color}25`; e.currentTarget.style.borderColor = s.color; }}
+          <div className="stakeholders-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 28 }}>
+            {SURVEY_TEMPLATES.map(s => (
+              <div key={s.id} style={{ background: '#F9FAFD', borderRadius: 24, padding: '32px 28px', border: '1px solid #D2DBEA', transition: 'all 0.3s ease', cursor: 'default' }}
+                onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-6px)'; e.currentTarget.style.boxShadow = `0 12px 30px ${s.color}15`; e.currentTarget.style.borderColor = s.color; }}
                 onMouseOut={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = '#D2DBEA'; }}
               >
-                <div style={{ width: 64, height: 64, borderRadius: 18, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30, marginBottom: 20 }}>{s.icon}</div>
-                <h3 style={{ fontSize: 18, fontWeight: 800, color: '#2d4771', marginBottom: 12 }}>Dành cho {s.title}</h3>
-                <p style={{ fontSize: 14, color: '#718096', lineHeight: 1.7, marginBottom: 20 }}>{s.desc}</p>
-                <Link to="/login" style={{ color: s.color, textDecoration: 'none', fontWeight: 700, fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  Tham gia ngay <span>→</span>
-                </Link>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+                  <div style={{ width: 56, height: 56, borderRadius: 16, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26 }}>{s.icon}</div>
+                  <span style={{ fontSize: 11, fontWeight: 800, color: s.color, background: `${s.color}15`, padding: '4px 10px', borderRadius: 8, textTransform: 'uppercase' }}>
+                    Dành cho {s.target}
+                  </span>
+                </div>
+                <h3 style={{ fontSize: 16, fontWeight: 800, color: '#2d4771', marginBottom: 10, lineHeight: 1.4, minHeight: 44 }}>{s.title}</h3>
+                <p style={{ fontSize: 13, color: '#718096', lineHeight: 1.6, marginBottom: 24, minHeight: 76 }}>{s.desc}</p>
+                <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                  <button onClick={() => setSelectedTemplate(s)} style={{ background: 'transparent', border: 'none', color: s.color, fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, padding: 0 }}>
+                    Xem câu hỏi mẫu <span>📋</span>
+                  </button>
+                  <span style={{ color: '#D2DBEA' }}>|</span>
+                  <Link to="/login" style={{ color: '#2d4771', textDecoration: 'none', fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    Tham gia ngay <span>→</span>
+                  </Link>
+                </div>
               </div>
             ))}
           </div>
         </div>
       </section>
-
       {/* ─── CTA SECTION ─── */}
       <section style={{ padding: '80px 0', background: '#F9FAFD' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 2.5rem' }}>
@@ -395,6 +437,60 @@ export default function Landing({ user, onLogout }) {
           ))}
         </div>
       </footer>
+
+      {/* ─── TEMPLATE DETAIL MODAL ─── */}
+      {selectedTemplate && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(13,28,47,0.7)', backdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+          onClick={e => e.target === e.currentTarget && setSelectedTemplate(null)}
+        >
+          <div style={{ background: '#fff', borderRadius: 24, padding: '36px 30px', width: '100%', maxWidth: 540, boxShadow: '0 24px 64px rgba(110,154,224,0.3)', border: '1px solid #D2DBEA', animation: 'fadeIn 0.25s ease-out' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ width: 48, height: 48, borderRadius: 14, background: selectedTemplate.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>
+                  {selectedTemplate.icon}
+                </div>
+                <div>
+                  <span style={{ fontSize: 11, fontWeight: 800, color: selectedTemplate.color, background: `${selectedTemplate.color}15`, padding: '3px 8px', borderRadius: 8, textTransform: 'uppercase' }}>
+                    Dành cho {selectedTemplate.target}
+                  </span>
+                  <h3 style={{ fontSize: 17, fontWeight: 800, color: '#2d4771', marginTop: 4 }}>{selectedTemplate.title}</h3>
+                </div>
+              </div>
+              <button onClick={() => setSelectedTemplate(null)} style={{ background: '#F9FAFD', border: '1px solid #D2DBEA', borderRadius: 10, width: 32, height: 32, cursor: 'pointer', fontSize: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#718096', transition: 'all 0.2s' }}
+                onMouseOver={e => e.currentTarget.style.background = '#EEF4FD'}
+                onMouseOut={e => e.currentTarget.style.background = '#F9FAFD'}
+              >
+                ×
+              </button>
+            </div>
+
+            <p style={{ fontSize: 13, color: '#718096', lineHeight: 1.6, marginBottom: 20 }}>
+              {selectedTemplate.desc}
+            </p>
+
+            <div style={{ background: '#F9FAFD', border: '1px solid #D2DBEA', borderRadius: 16, padding: '16px 20px', maxHeight: 260, overflowY: 'auto' }}>
+              <p style={{ fontSize: 12, fontWeight: 800, color: '#487bc9', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.5 }}>Danh sách câu hỏi mẫu ({selectedTemplate.questions.length}):</p>
+              <ul style={{ listStyleType: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {selectedTemplate.questions.map((q, idx) => (
+                  <li key={idx} style={{ display: 'flex', gap: 10, fontSize: 13, color: '#2d4771', lineHeight: 1.5 }}>
+                    <span style={{ color: selectedTemplate.color, fontWeight: 700 }}>{idx + 1}.</span>
+                    <span>{q}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
+              <button onClick={() => setSelectedTemplate(null)} style={{ flex: 1, padding: '12px', borderRadius: 12, border: '1.5px solid #D2DBEA', background: '#fff', color: '#718096', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>
+                Đóng
+              </button>
+              <Link to="/login" style={{ flex: 1.5, padding: '12px', borderRadius: 12, background: 'linear-gradient(135deg, #6E9AE0, #487bc9)', color: '#fff', fontWeight: 700, fontSize: 14, border: 'none', cursor: 'pointer', textAlign: 'center', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(110,154,224,0.35)' }}>
+                Tham gia Khảo sát
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`
         @keyframes pulse { 0%, 100% { opacity: 0.6; transform: scale(1); } 50% { opacity: 0.9; transform: scale(1.05); } }

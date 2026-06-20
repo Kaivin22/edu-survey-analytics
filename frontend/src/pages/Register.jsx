@@ -136,7 +136,7 @@ function Register() {
       </div>
 
       <p style={{ textAlign: 'center', marginTop: 20, color: 'rgba(255,255,255,0.6)', fontSize: 13, position: 'relative', zIndex: 2 }}>
-        © 2026 Academic Synergy
+        © 2026 Đại học Kiến trúc Đà Nẵng
       </p>
     </div>
   );

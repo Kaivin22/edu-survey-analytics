@@ -4,7 +4,7 @@ import { LogOut, ClipboardList, Bell, User, Calendar, FileText, CheckCircle, Clo
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-const ROLE_LABELS = { Student: 'Sinh viên', Lecturer: 'Giảng viên', Alumnus: 'Cựu sinh viên', Employer: 'Nhà tuyển dụng', Admin: 'Quản trị viên', Manager: 'Cán bộ quản lý' };
+const ROLE_LABELS = { Student: 'Sinh viên', Lecturer: 'Giảng viên', Alumnus: 'Cựu sinh viên', Employer: 'Nhà tuyển dụng', Manager: 'Cán bộ quản lý' };
 const TARGET_LABELS = { Student: 'Sinh viên', Lecturer: 'Giảng viên', Alumnus: 'Cựu sinh viên', Employer: 'Nhà tuyển dụng', All: 'Tất cả' };
 
 const SCHOOLS = [];
@@ -37,7 +37,7 @@ function Dashboard({ user, onLogout, onUpdateUser }) {
   useEffect(() => {
     fetchSurveys();
     fetchNotifications();
-    if (['Admin', 'Manager'].includes(user.role)) {
+    if (user.role === 'Manager') {
       fetchCreatedSurveys();
       fetchTickets();
     } else {
@@ -291,16 +291,16 @@ function Dashboard({ user, onLogout, onUpdateUser }) {
           {/* Side menu */}
           <div className="rounded-2xl p-3 space-y-1 border" style={{ background: '#fff', borderColor: '#D2DBEA' }}>
             {[
-              { key: 'surveys', icon: ClipboardList, label: 'Khảo sát cần làm', visible: !['Admin', 'Manager'].includes(user.role) },
+              { key: 'surveys', icon: ClipboardList, label: 'Khảo sát cần làm', visible: user.role !== 'Manager' },
               {
                 key: 'created-surveys',
                 icon: FileText,
                 label: 'Khảo sát đã tạo',
-                visible: ['Admin', 'Manager'].includes(user.role)
+                visible: user.role === 'Manager'
               },
-              { key: 'history', icon: CheckCircle, label: 'Lịch sử khảo sát', visible: !['Admin', 'Manager'].includes(user.role) },
-              { key: 'tickets', icon: HelpCircle, label: 'Báo lỗi & Hỗ trợ', visible: !['Admin', 'Manager'].includes(user.role) },
-              { key: 'tickets-manage', icon: HelpCircle, label: 'Quản lý Hỗ trợ', visible: ['Admin', 'Manager'].includes(user.role) },
+              { key: 'history', icon: CheckCircle, label: 'Lịch sử khảo sát', visible: user.role !== 'Manager' },
+              { key: 'tickets', icon: HelpCircle, label: 'Báo lỗi & Hỗ trợ', visible: user.role !== 'Manager' },
+              { key: 'tickets-manage', icon: HelpCircle, label: 'Quản lý Hỗ trợ', visible: user.role === 'Manager' },
               { key: 'profile', icon: User, label: 'Thông tin cá nhân' },
             ]
             .filter(item => item.visible !== false)

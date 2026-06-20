@@ -345,34 +345,17 @@ function SurveyCreation({ isEdit = false, user }) {
             {/* School / Department / Class Targeting Filters */}
             <div className="pt-4 border-t border-dashed" style={{ borderColor: '#D2DBEA' }}>
               <p className="text-xs font-bold uppercase tracking-wide mb-3" style={{ color: '#6E9AE0' }}>Phân quyền / Đối tượng khảo sát chi tiết (Tùy chọn)</p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold mb-1 ml-1" style={{ color: '#2d4771' }}>Trường học mục tiêu</label>
-                  <select
-                    value={form.school}
-                    disabled={user?.role === 'Manager'}
-                    onChange={e => setForm(f => ({ ...f, school: e.target.value, department: '', class: [] }))}
-                    className="w-full px-4 py-2.5 rounded-2xl border text-sm font-bold outline-none disabled:opacity-75"
-                    style={selectStyle}
-                  >
-                    {user?.role !== 'Manager' && <option value="">Tất cả các trường (Đà Nẵng)</option>}
-                    {dynamicSchools.map(sc => (
-                      <option key={sc} value={sc}>{sc}</option>
-                    ))}
-                  </select>
-                </div>
-
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold mb-1 ml-1" style={{ color: '#2d4771' }}>Khoa mục tiêu</label>
                   <select
                     value={form.department}
-                    disabled={!form.school}
                     onChange={e => setForm(f => ({ ...f, department: e.target.value, class: [] }))}
-                    className="w-full px-4 py-2.5 rounded-2xl border text-sm font-bold outline-none disabled:opacity-50"
+                    className="w-full px-4 py-2.5 rounded-2xl border text-sm font-bold outline-none"
                     style={selectStyle}
                   >
                     <option value="">Tất cả các khoa</option>
-                    {depts.map(d => (
+                    {(dynamicDepartments[form.school || user?.school || ''] || []).map(d => (
                       <option key={d} value={d}>{d}</option>
                     ))}
                   </select>

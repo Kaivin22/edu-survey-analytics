@@ -1,216 +1,211 @@
-# Phan mem Khao sat Lay y kien Cac ben Lien quan Trong Giao duc
-Du an duoc xay dung dua tren tai lieu mo ta chuc nang cua SDC, phuc vu kiem dinh chat luong giao duc theo chuan AUN-QA va ABET. He thong ho tro da doi tuong su dung bao gom Sinh vien, Giang vien, Cuu sinh vien, Nha tuyen dung, Can bo quan ly va Admin.
+# Cổng Khảo sát ĐBCL - Đại học Kiến trúc Đà Nẵng
 
-He thong duoc thiet ke theo phong cach Premium Glassmorphism hien dai, responsive hoan hao va ho tro truc quan hoa du lieu qua bieu do cung tinh nang xuat bao cao chuyen nghiep.
+Hệ thống được xây dựng phục vụ công tác bảo đảm chất lượng và liên tục cải tiến chất lượng đào tạo của Trường Đại học Kiến trúc Đà Nẵng (DAU), đáp ứng các tiêu chuẩn kiểm định chất lượng giáo dục trong nước và quốc tế (như AUN-QA và ABET). Hệ thống hỗ trợ thu thập ý kiến trực tuyến từ các bên liên quan bao gồm: Sinh viên, Giảng viên, Cựu sinh viên và Nhà tuyển dụng, dưới sự quản lý toàn diện của Cán bộ quản lý ĐBCL.
 
----
-
-## Tinh nang Chinh
-
-- Trang gioi thieu: Trang Landing da section (Hero, Gioi thieu, Doi tuong, Lien he, Footer) voi video background sac net.
-- Dang nhap va Dang ky: Form xac thuc truyen thong qua email va mat khau voi video background sinh dong.
-- Dang nhap Google OAuth 2.0: Tich hop Google Implicit Flow hoac nhap email Google thu cong (fallback) khi chua cau hinh Client ID.
-- Quen mat khau: Gui ma OTP thuc qua email (SMTP) de dat lai mat khau. He thong tu dong ho tro hien thi OTP truc tiep tren giao dien neu SMTP chua duoc thiet lap hoac xay ra loi ket noi.
-- Chinh sua thong tin ca nhan: Chinh sua ho ten, ma nhan dien, va doi mat khau (ngoai tru cac tai khoan he thong demo).
-- Dashboard Admin va Manager: Quan ly khao sat, xem thong ke bieu do phan bo ket qua theo thoi gian thuc, quan ly danh sach nguoi dung.
-- Dashboard Stakeholder: Danh sach khao sat duoc phan cong, thuc hien lam khao sat, xem cac thong bao moi nhan duoc.
-- Xuat bao cao da dang: Ho tro xuat bieu mau khao sat theo 3 dinh dang bao gom Excel (.xlsx), Word (.docx) va PDF (.pdf) - ho tro day du phong chu tieng Viet.
-- He thong thong bao: Tu dong gui thong bao khi co khao sat moi hoac nhac nho thoi han khao sat.
-- Tu dong luu tien trinh (Auto-Save): Tu dong luu tien do lam khao sat cua stakeholder vao localStorage de tranh mat du lieu khi gap su co mat ket noi.
-- Dieu huong thong minh: Luon co nut quay tro lai Trang chu tren tat ca cac trang; thanh Navbar hien thi thong tin va trang thai dang nhap ro rang.
+Giao diện ứng dụng được thiết kế theo phong cách hiện đại (Premium Glassmorphism), tương thích hoàn hảo trên các thiết bị di động (Responsive), hỗ trợ biểu đồ phân tích thời gian thực và xuất báo cáo văn bản chuyên nghiệp.
 
 ---
 
-## Cong nghe Su dung
+## Các Tính Năng Chính
 
-### 1. Giao dien (thumuc frontend)
-- ReactJS (Vite): SPA muot ma, tang toc do tai trang va toi uu trai nghiem.
-- TailwindCSS: CSS Utility-first ket hop cac bien mau tuy bien de tao hien thi cao cap.
-- Lucide Icons: Thu vien icon don gian va sac net.
-- Chart and Analytics: Ve bieu do phan bo va ty le phan hoi thoi gian thuc tren giao dien quan tri.
-- Google OAuth 2.0: Dang nhap bang tai khoan Google thuc hoac phuong an du phong nhap thu cong.
-
-### 2. May chu (thumuc backend)
-- ExpressJS: Xay dung API RESTful nhanh gon.
-- Sequelize ORM: Dong bo hoa va truy van co so du lieu an toan.
-- SQLite Database: Su dung mac dinh cho moi truong lap trinh, khong yeu cau cai dat he quan tri co so du lieu phuc tap (co the chuyen sang MySQL/PostgreSQL de dang thong qua file .env).
-- JWT Authentication va RBAC: Bao mat he thong bang Token va phan quyen vai tro (Admin, Manager, Student, Lecturer, Alumnus, Employer).
-- Nodemailer: Gui ma xac nhan OTP thuc qua moi truong mail.
-- ExcelJS: Thu vien tao file bao cao Excel.
-- docx: Thu vien tao van ban Word dinh dang bang.
-- PDFKit: Thu vien tao file PDF tieng Viet co nhung san phong chu Arial.
+- **Trang chủ giới thiệu**: Landing page hiện đại giới thiệu về hệ thống và tích hợp hiển thị trực quan 4 biểu mẫu khảo sát tiêu chuẩn kèm tính năng xem câu hỏi mẫu trực tiếp qua Popup/Modal.
+- **Đăng nhập & Đăng ký**: Giao diện xác thực bảo mật, hỗ trợ tài khoản thường và liên kết đăng nhập nhanh thông qua Google OAuth 2.0 (Implicit Flow).
+- **Quên mật khẩu & OTP**: Gửi mã OTP xác thực thực tế qua Email (SMTP). Tự động hỗ trợ hiển thị mã OTP ngay trên giao diện thử nghiệm nếu dịch vụ SMTP chưa được cấu hình hoặc xảy ra lỗi kết nối.
+- **Dashboard Cán bộ quản lý**:
+  - Quản lý danh sách tài khoản người dùng của nhà trường (phê duyệt kích hoạt tài khoản đăng ký mới).
+  - Thiết lập, quản lý và phân phối khảo sát chi tiết đến từng Khoa, Lớp.
+  - Quản lý cây danh mục của nhà trường (Khoa và Lớp học tương ứng).
+  - Theo dõi tiến độ khảo sát: xem chi tiết danh sách người tham gia (ai đã làm, ai chưa làm khảo sát) theo từng khoa, lớp học để đôn đốc.
+  - Thống kê biểu đồ kết quả khảo sát thời gian thực.
+  - **Hệ thống hỗ trợ ra quyết định (DSS)**: Tự động phân tích điểm số Likert, cảnh báo các tiêu chí đánh giá yếu (điểm trung bình dưới 3.5) và đưa ra các kế hoạch hành động cải tiến chất lượng đào tạo tương ứng.
+  - Quản lý và xử lý, phản hồi các ticket/yêu cầu hỗ trợ báo lỗi từ phía người dùng.
+- **Dashboard Người làm khảo sát**:
+  - Giao diện thực hiện khảo sát thân thiện, tích hợp tính năng tự động lưu tiến trình (Auto-Save) phòng ngừa sự cố mất kết nối mạng đột ngột.
+  - Xem lịch sử các khảo sát đã thực hiện.
+  - Gửi yêu cầu hỗ trợ, báo lỗi hệ thống và nhận phản hồi trực tiếp từ Cán bộ quản lý.
+- **Xuất báo cáo đa dạng**: Hỗ trợ xuất biểu mẫu khảo sát và kết quả ra các định dạng Excel (.xlsx), Word (.docx) và PDF (.pdf) hỗ trợ đầy đủ tiếng Việt có dấu.
+- **Tiến trình gửi mail nhắc nhở tự động**: Quét định kỳ hàng ngày và tự động gửi email nhắc nhở cho các đối tượng chưa hoàn thành khảo sát sắp đến hạn.
 
 ---
 
-## Huong dan Khoi chay Du an
+## Công Nghệ Sử Dụng
 
-### Phuong phap 1: Su dung Docker (Khuyen khich)
-Yeu cau: May tinh da cai dat va dang chay Docker Desktop.
+### 1. Giao diện (Thư mục `frontend`)
+- **ReactJS (Vite)**: Ứng dụng SPA tối ưu tốc độ tải trang và trải nghiệm người dùng mượt mà.
+- **TailwindCSS**: Thiết kế giao diện Glassmorphism cao cấp, sống động, Responsive hoàn hảo trên mọi thiết bị.
+- **Lucide Icons**: Bộ biểu tượng trực quan, hiện đại.
+- **Biểu đồ & Thống kê**: Tích hợp biểu đồ phân tích tỷ lệ phản hồi và phân bổ điểm số theo thời gian thực.
 
-1. Mo Terminal hoac PowerShell tai thu muc goc cua du an.
-2. Chay lenh sau de tu dong tai thu vien, dung va ket noi cac container:
+### 2. Máy chủ (Thư mục `backend`)
+- **Node.js / ExpressJS**: Xây dựng API RESTful hiệu năng cao.
+- **Sequelize ORM**: Quản lý và truy vấn cơ sở dữ liệu an toàn.
+- **SQLite Database**: Lưu trữ dữ liệu mặc định (tệp `database.sqlite` nằm trong thư mục `data/`), dễ dàng chuyển đổi sang MySQL/PostgreSQL thông qua tệp `.env`.
+- **JWT & Phân quyền (RBAC)**: Bảo mật phân quyền chặt chẽ theo các vai trò: Cán bộ quản lý (Manager), Sinh viên (Student), Giảng viên (Lecturer), Cựu sinh viên (Alumnus) và Nhà tuyển dụng (Employer).
+- **Nodemailer**: Xử lý gửi email OTP và email nhắc nhở tự động.
+- **Xuất Báo cáo**: Sử dụng các thư viện ExcelJS (xuất Excel), docx (xuất Word), PDFKit (xuất PDF hỗ trợ font Arial tiếng Việt).
+
+---
+
+## Hướng Dẫn Khởi Chạy Dự Án
+
+### Phương pháp 1: Sử dụng Docker (Khuyến khích)
+Yêu cầu: Máy tính đã cài đặt và đang chạy ứng dụng Docker Desktop.
+
+1. Mở Terminal tại thư mục gốc của dự án.
+2. Chạy lệnh sau để tải thư viện và khởi tạo các container:
    ```bash
    docker-compose up --build
    ```
-3. Truy cap he thong qua cac dia chi:
-   - Frontend App: http://localhost:3000
+3. Truy cập hệ thống:
+   - Giao diện người dùng: http://localhost:3000
    - Backend API: http://localhost:5000/api
-4. De dung container, dung lenh:
+4. Để dừng container, sử dụng lệnh:
    ```bash
    docker-compose down
    ```
 
-### Phuong phap 2: Chay truc tiep tren may cuc bo (Local)
-Yeu cau: May tinh da cai dat Node.js phien ban v18.x tro len.
+### Phương pháp 2: Chạy trực tiếp trên máy cục bộ (Local)
+Yêu cầu: Đã cài đặt Node.js phiên bản từ v18.x trở lên.
 
-1. Mo terminal tai thu muc goc cua du an va chay lenh de cai dat thu vien cho ca FE va BE:
+1. Cài đặt toàn bộ thư viện cho frontend và backend:
    ```bash
    npm run install-all
    ```
-2. Chay dong thoi ca hai phan bang lenh:
+2. Khởi chạy đồng thời cả frontend và backend ở chế độ phát triển:
    ```bash
    npm run dev
    ```
-3. Truy cap ung dung theo cac dia chi:
-   - Giao dien: http://localhost:3000
-   - API: http://localhost:5000
+3. Truy cập ứng dụng:
+   - Giao diện: http://localhost:3000
+   - Backend API: http://localhost:5000/api
 
 ---
 
-## Tai khoan Thu nghiem (Auto-Seeded)
+## Tài Khoản Thử Nghiệm (Auto-Seeded)
 
-Co so du lieu se tu dong khoi tao san cac vai tro, danh muc khoa va lop cung nhu tai khoan va khao sat mau.
+Khi cơ sở dữ liệu được khởi tạo, hệ thống sẽ tự động tạo sẵn các vai trò, danh mục cơ cấu (khoa, lớp) cùng các tài khoản thử nghiệm sau đây:
 
-Mat khau chung cho tat ca cac tai khoan mac dinh la: 12345678
+**Mật khẩu chung cho tất cả các tài khoản mặc định:** `12345678`
 
-| Vai tro | Email dang nhap | Ten nguoi dung | Muc dich thu nghiem |
+| Vai trò | Email đăng nhập | Tên người dùng | Mục đích thử nghiệm |
 | :--- | :--- | :--- | :--- |
-| Quan tri vien (Admin) | trankimlien31072004@gmail.com | Nguyen Quan Tri | Quan ly nguoi dung, phan quyen, khao sat toan he thong |
-| Can bo quan ly | manager@edu.vn | Tran Can Bo | Tao, chinh sua, xoa va xem thong ke khao sat trong truong duoc phan cong |
-| Sinh vien | student1@edu.vn | Tran Kim Lien | Lam khao sat danh cho Sinh vien |
-| Sinh vien | student2@edu.vn | Nguyen Van Tuan | Lam khao sat danh cho Sinh vien |
-| Giang vien | lecturer1@edu.vn | Pham Giang Vien | Giang vien lam khao sat duoc phan cong |
-| Cuu sinh vien | alumnus1@edu.vn | Hoang Cuu SV | Cuu sinh vien lam khao sat CTDT sau ra truong |
-| Nha tuyen dung | employer1@edu.vn | FPT Software | Nha tuyen dung danh gia chat luong sinh vien tot nghiep |
+| **Cán bộ quản lý** | trankimlien31072004@gmail.com | Cán bộ Quản lý ĐBCL | Quản lý người dùng, phân phối khảo sát, xem thống kê & DSS, trả lời hỗ trợ |
+| **Sinh viên** | student1@edu.vn | Trần Kim Liên | Thực hiện làm khảo sát dành cho Sinh viên |
+| **Sinh viên** | student2@edu.vn | Nguyễn Văn Tuấn | Thực hiện làm khảo sát dành cho Sinh viên |
+| **Giảng viên** | lecturer1@edu.vn | Phạm Giảng Viên | Thực hiện làm khảo sát dành cho Giảng viên |
+| **Cựu sinh viên** | alumnus1@edu.vn | Hoàng Cựu SV | Làm khảo sát đánh giá chương trình đào tạo sau khi ra trường |
+| **Nhà tuyển dụng** | employer1@edu.vn | FPT Software | Nhà tuyển dụng đánh giá chất lượng sinh viên tốt nghiệp |
 
-Ngoai ra, ban co the dang ky tai khoan moi hoac su dung phuong thuc dang nhap Google de tu dong tao tai khoan thuc.
+*(Bạn cũng có thể đăng ký tài khoản mới trực tiếp hoặc sử dụng tính năng Đăng nhập bằng Google).*
 
 ---
 
-## Cau hinh Bien moi truong
+## Cấu Hình Biến Môi Trường
 
 ### Backend (backend/.env)
 ```env
 PORT=5000
 DB_DIALECT=sqlite
 DB_STORAGE=./data/database.sqlite
-JWT_SECRET=your-jwt-secret
+JWT_SECRET=edu_survey_stakeholder_secret_key_2026
 FRONTEND_URL=http://localhost:3000
 
-# SMTP de gui mail OTP thuc (Thay doi thong tin thuc cua ban)
-# Luu y ve SMTP_PASS: Phai su dung Mat khau ung dung (App Password) cua Google. Hay viet lien 16 ky tu chu thuong, xoa toan bo khoang trang de Nodemailer nhan dien dung (vi du: abcdefghijklmnop).
-# Luu y ve SMTP_PORT: Tren moi truong production (Render), hay dung cong 465 (voi secure = true) thay vi cong 587, vi cac nha cung cap cloud nhu Render se chan cong 587 de phong ngua spam.
+# SMTP gửi email (Sử dụng Mật khẩu ứng dụng - App Password của Google)
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=465
-SMTP_USER=email-gui-mail-cua-ban@gmail.com
-SMTP_PASS=abcdefghijklmnop
-SMTP_FROM=Academic Synergy <email-gui-mail-cua-ban@gmail.com>
+SMTP_USER=tuan_2251220274@dau.edu.vn
+SMTP_PASS=pcqtfzhlmdcrjefj
+SMTP_FROM="ĐBCL - Đại học Kiến trúc Đà Nẵng" <tuan_2251220274@dau.edu.vn>
 ```
 
 ### Frontend (frontend/.env)
 ```env
 VITE_API_URL=http://localhost:5000/api
 
-# Google OAuth 2.0 (tuy chon)
+# Google OAuth Client ID (Tùy chọn)
 VITE_GOOGLE_CLIENT_ID=your-google-client-id
 ```
 
-Neu thong tin Google Client ID de trong, nut dang nhap bang Google se tu dong ve che do fallback nhap tay ho ten va email.
-
 ---
 
-## Cau truc Du an
+## Cấu Trúc Thư Mục Dự Án
 
 ```
 edu-survey-analytics/
-├── docker-compose.yml        # File khoi chay he thong dong thoi FE va BE
-├── package.json              # File chua scripts khoi chay chung
-├── README.md                 # Huong dan su dung nay
+├── docker-compose.yml        # Tệp khởi chạy Docker đồng thời FE và BE
+├── package.json              # Tệp chứa các scripts khởi chạy chung
+├── README.md                 # Tài liệu hướng dẫn sử dụng này
 │
 ├── frontend/
 │   ├── Dockerfile
-│   ├── nginx.conf            # Cau hinh may chu Nginx phuc vu SPA
+│   ├── nginx.conf            # Cấu hình máy chủ Nginx phục vụ ứng dụng SPA
 │   ├── src/
-│   │   ├── App.jsx           # Cau hinh routing va luu trang thai xac thuc
+│   │   ├── App.jsx           # Cấu hình định tuyến (routing) và xác thực người dùng
 │   │   ├── pages/
-│   │   │   ├── Landing.jsx       # Trang landing page gioi thieu he thong
-│   │   │   ├── Login.jsx         # Trang dang nhap he thong
-│   │   │   ├── Register.jsx      # Trang dang ky tai khoan
-│   │   │   ├── ForgotPassword.jsx# Trang quen mat khau va nhap OTP
-│   │   │   ├── Dashboard.jsx     # Dashboard chung cho cac Stakeholder
-│   │   │   ├── AdminDashboard.jsx# Dashboard danh cho Admin va Manager
-│   │   │   ├── SurveyCreation.jsx# Giao dien tao hoac sua khao sat (Admin/Manager)
-│   │   │   ├── SurveyTaking.jsx  # Giao dien thuc hien lam khao sat
-│   │   │   └── SurveyStats.jsx   # Giao dien xem thong ke bieu do va ket qua
+│   │   │   ├── Landing.jsx       # Trang chủ giới thiệu hệ thống & biểu mẫu mẫu
+│   │   │   ├── Login.jsx         # Trang đăng nhập hệ thống
+│   │   │   ├── Register.jsx      # Trang đăng ký tài khoản
+│   │   │   ├── ForgotPassword.jsx# Trang quên mật khẩu và nhập OTP xác minh
+│   │   │   ├── Dashboard.jsx     # Dashboard dành cho các Stakeholder (SV, GV, CSV, NTD)
+│   │   │   ├── AdminDashboard.jsx# Dashboard dành cho Cán bộ quản lý
+│   │   │   ├── SurveyCreation.jsx# Giao diện tạo hoặc chỉnh sửa khảo sát
+│   │   │   ├── SurveyTaking.jsx  # Giao diện thực hiện làm bài khảo sát
+│   │   │   └── SurveyStats.jsx   # Giao diện xem thống kê phân tích, DSS và xuất báo cáo
 │   │   └── index.css
 │   └── package.json
 │
 ├── backend/
 │   ├── Dockerfile
-│   ├── server.js              # Diem khoi chay backend, dong bo DB va tao admin mac dinh
+│   ├── server.js              # Khởi chạy backend, đồng bộ DB và tạo manager genesis mặc định
 │   ├── config/
-│   │   └── db.js              # Ket noi co so du lieu Sequelize
-│   ├── models/                # Dinh nghia cac thuc the du lieu (Role, User, Survey,...)
+│   │   └── db.js              # Kết nối cơ sở dữ liệu bằng Sequelize
+│   ├── models/                # Định nghĩa các thực thể dữ liệu (Role, User, Survey,...)
 │   ├── routes/
-│   │   ├── auth.js            # Xu ly dang nhap, dang ky, doi thong tin, quen mat khau
-│   │   ├── surveys.js         # API quan ly khao sat, lay chi tiet va thuc hien submit
-│   │   ├── users.js           # API quan ly tai khoan va gui thong bao
-│   │   └── reports.js         # API xuat bao cao dinh dang Excel, Word va PDF
+│   │   ├── auth.js            # APIs xác thực: đăng nhập, đăng ký, đổi thông tin, quên mật khẩu
+│   │   ├── surveys.js         # APIs quản lý khảo sát, lấy chi tiết và nộp bài khảo sát
+│   │   ├── users.js           # APIs quản lý tài khoản người dùng và thông báo
+│   │   └── reports.js         # APIs xuất báo cáo định dạng Excel, Word và PDF hỗ trợ tiếng Việt
 │   ├── middleware/
-│   │   └── auth.js            # Middleware xac thuc Token va kiem tra quyen vai tro
+│   │   └── auth.js            # Middleware xác thực Token JWT và kiểm tra vai trò (RBAC)
 │   ├── scripts/
-│   │   └── initDb.js          # Seed du lieu mac dinh ban dau
-│   ├── fonts/                 # Thu muc chua font chu Arial tieng Viet phuc vu PDF
+│   │   └── initDb.js          # Gieo (Seed) dữ liệu cơ sở cấu trúc và các tài khoản demo ban đầu
+│   ├── fonts/                 # Thư mục chứa font chữ Arial hỗ trợ tiếng Việt phục vụ xuất PDF
 │   └── package.json
 ```
 
 ---
 
-## Cac Quy trinh Thuy nghiem Chinh
+## Các Quy Trình Thử Nghiệm Chính
 
-### 1. Quy trinh nguoi lam khao sat (Stakeholder)
-1. Truy cap he thong va chon nut Tham gia khao sat.
-2. Dang nhap bang mot tai khoan duoc cap (nhu student1@edu.vn) hoac dang nhap bang Google.
-3. Tai trang chu, chon mot cuoc khao sat dang mo de lam.
-4. Tra loi cac cau hoi tu luan va trac nghiem, sau do nhan Gui phan hoi.
-5. Co the vao tab Thong tin ca nhan de chinh sua thong tin ca nhan cua minh.
+### 1. Quy trình dành cho Người làm khảo sát (Stakeholders)
+1. Truy cập Trang chủ và nhấn nút **Đăng nhập** hoặc **Tham gia khảo sát**.
+2. Đăng nhập bằng một trong các tài khoản mẫu (ví dụ: `student1@edu.vn` với mật khẩu `12345678`) hoặc tài khoản Google cá nhân.
+3. Tại giao diện chính của Dashboard, thực hiện khảo sát có trong danh sách được phân công.
+4. Gửi yêu cầu hỗ trợ hoặc báo lỗi hệ thống thông qua tab **Báo lỗi & Hỗ trợ** nếu gặp sự cố.
 
-### 2. Quy trinh nguoi quan tri (Admin/Manager)
-1. Dang nhap bang tai khoan admin (trankimlien31072004@gmail.com) hoac tai khoan manager.
-2. Trang dashboard hien thi toan bo khao sat thuoc pham vi quan ly.
-3. Chon nut Tao khao sat moi de thiet ke khao sat (tieu de, doi tuong nhan, cau hoi).
-4. Quan ly khao sat da tao bang cach bam cac bieu tuong xem thong ke bieu do, sua, xoa.
-5. Xuat báo cáo bang cach chon cac dinh dang Excel, Word hoac PDF.
-6. Rieng voi Admin co the quan ly va thiet lap vai tro nguoi dung o tab Quan ly nguoi dung.
+### 2. Quy trình dành cho Cán bộ quản lý (Manager)
+1. Đăng nhập bằng tài khoản cán bộ quản lý `trankimlien31072004@gmail.com` (mật khẩu `12345678`).
+2. Nhấp vào nút **Tạo Khảo Sát Mới** ở tab **Quản lý phiếu khảo sát** để tạo khảo sát bằng cách thiết lập câu hỏi hoặc chọn từ ngân hàng mẫu.
+3. Tiến hành phân phối khảo sát tới các đối tượng cụ thể (ví dụ: đối tượng sinh viên thuộc các khoa, lớp học cụ thể).
+4. Để đôn đốc thực hiện: bấm vào biểu tượng con mắt ở cột **Hành động** của cuộc khảo sát để xem thống kê chi tiết, danh sách người tham gia (ai đã làm, ai chưa làm khảo sát theo từng khoa/lớp).
+5. Tại trang Thống kê khảo sát, truy cập tab **Hỗ trợ ra quyết định (DSS)** để xem hệ thống phân tích điểm số Likert, cảnh báo các tiêu chí đánh giá yếu (điểm trung bình dưới 3.5) và đề xuất các hành động cải tiến tương ứng.
+6. Nhấp vào tab **Quản lý hỗ trợ & báo lỗi** trên thanh menu chính của Dashboard để quản lý và phản hồi các yêu cầu hỗ trợ, báo lỗi hệ thống từ người dùng.
 
-### 3. Quy trinh quen mat khau
-1. Tai trang dang nhap, nhan vao nut Quen mat khau.
-2. Nhap email da dang ky tai khoan de lay ma OTP (OTP thuc hoac OTP thong bao tren man hinh).
-3. Nhap ma OTP va mat khau moi de thay doi mat khau va dang nhap lai he thong.
-
----
-
-## Tich hop CI/CD (GitHub Actions)
-
-Du an duoc tich hop san quy trinh Tich hop va Trien khai lien tuc (CI/CD) tu dong qua GitHub Actions (cau hinh tai file `.github/workflows/ci-cd.yml`).
-- Tinh nang CI (Continuous Integration): Moi khi push code hoac tao Pull Request len nhanh main va feature/tuan, GitHub Actions se khoi chay tu dong:
-  1. Thiet lap moi truong Node.js 20.
-  2. Cai dat thu vien va tien hanh build kiem thu toan bo frontend de dam bao khong co loi bien dich JS/JSX.
-  3. Cai dat thu vien backend va tu dong chay kiem tra cu phap (syntax checks) tat ca cac file routes va server tren backend bang trinh bien dich node de ngan chan cac loi runtime hoac khai bao trung lap identifier truoc khi deploy.
-- Tinh nang CD (Continuous Deployment): Sau khi phan kiem thu tu dong (CI) hoan tat va pass tat ca cac buoc, kho chua se tu dong trien khai deploy phien ban moi nhat len may chu Render de nguoi dung luon trai nghiem ban cap nhat on dinh nhat.
+### 3. Quy trình quên mật khẩu và đổi OTP
+1. Tại trang đăng nhập, nhấn vào đường dẫn **Quên mật khẩu?**.
+2. Nhập email đã đăng ký tài khoản để lấy mã OTP xác minh (mã sẽ được gửi thực tế đến hòm thư, hoặc tự động hiển thị ngay trên giao diện web nếu gặp sự cố gửi mail).
+3. Nhập mã OTP gồm 6 chữ số và thiết lập mật khẩu mới để đổi mật khẩu và đăng nhập lại hệ thống.
 
 ---
 
-## Giay phep su dung
+## Tích Hợp CI/CD (GitHub Actions)
 
-Ban quyen thuoc ve Academic Synergy - Ung dung khao sat lay y kien cac ben lien quan trong giao duc.
+Dự án được tích hợp sẵn quy trình tích hợp và triển khai liên tục (CI/CD) tự động qua GitHub Actions (tại tệp `.github/workflows/ci-cd.yml`).
+- **CI (Tích hợp liên tục)**: Mỗi khi có thao tác push code hoặc tạo Pull Request lên nhánh chính (`main`, `feature/tuan`), GitHub Actions sẽ tự động khởi chạy môi trường Node.js 20, cài đặt các thư viện cần thiết, chạy lệnh kiểm tra cú pháp backend và build kiểm thử frontend để đảm bảo không xảy ra bất kỳ lỗi biên dịch nào.
+- **CD (Triển khai liên tục)**: Sau khi quy trình CI hoàn tất thành công, mã nguồn mới nhất sẽ tự động được triển khai trực tiếp lên máy chủ Render để đảm bảo hệ thống luôn được cập nhật phiên bản ổn định nhất.
+
+---
+
+## Bản Quyền
+
+Bản quyền thuộc về Trường Đại học Kiến trúc Đà Nẵng (DAU) - Hệ thống Khảo sát ý kiến các bên liên quan phục vụ Bảo đảm chất lượng đào tạo.

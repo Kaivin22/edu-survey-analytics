@@ -118,12 +118,7 @@ function FilterBar({ filters, onChange, onClear, dynamicSchools = [], dynamicDep
         <span className="text-xs font-extrabold text-[#487bc9]">Bộ lọc:</span>
       </div>
 
-      <select value={filters.school} onChange={e => onChange({ school: e.target.value, department: '', class: '' })} style={selStyle}>
-        <option value="">🏫 Tất cả trường</option>
-        {dynamicSchools.map(sc => (
-          <option key={sc} value={sc}>{sc}</option>
-        ))}
-      </select>
+
 
       <select value={filters.department} onChange={e => onChange({ ...filters, department: e.target.value, class: '' })} style={{ ...selStyle, opacity: depts.length ? 1 : 0.4 }} disabled={!depts.length}>
         <option value="">📚 Tất cả khoa</option>
@@ -161,7 +156,7 @@ function SurveyStats({ user }) {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [filters, setFilters] = useState({ school: '', department: '', class: '' });
+  const [filters, setFilters] = useState({ school: user?.school || '', department: '', class: '' });
   const token = localStorage.getItem('token');
 
   // Tabs states
@@ -262,7 +257,7 @@ function SurveyStats({ user }) {
   };
 
   const handleFilterChange = (newFilters) => { setFilters(newFilters); };
-  const handleFilterClear  = () => setFilters({ school: '', department: '', class: '' });
+  const handleFilterClear  = () => setFilters({ school: user?.school || '', department: '', class: '' });
 
   // Filter participants in javascript
   const filteredParticipants = participants.filter(p => {
