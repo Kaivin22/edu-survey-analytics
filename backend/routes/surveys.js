@@ -35,7 +35,7 @@ router.get('/', authenticateToken, async (req, res) => {
 
     const userRole = req.user.role;
     const userId = req.user.id;
-    const { createdOnly } = req.query;
+    const { createdOnly, history } = req.query;
 
     if (createdOnly === 'true' || userRole === 'Manager') {
       const whereClause = {};
@@ -83,6 +83,7 @@ router.get('/', authenticateToken, async (req, res) => {
           if (!r.Survey) return null;
           return {
             ...r.Survey.toJSON(),
+            responseId: r.id,
             questionCount: r.Survey.Questions ? r.Survey.Questions.length : 0,
             submittedAt: r.submittedAt
           };
@@ -106,13 +107,13 @@ router.get('/', authenticateToken, async (req, res) => {
       };
 
       if (user) {
-        // Filter: survey must match user's school or be null (global)
+        // Filter: survey must match user's school or be null/empty
         surveyWhere.school = {
-          [Op.or]: [null, user.school]
+          [Op.or]: [null, '', user.school]
         };
-        // Filter: survey must match user's department or be null
+        // Filter: survey must match user's department or be null/empty
         surveyWhere.department = {
-          [Op.or]: [null, user.department]
+          [Op.or]: [null, '', user.department]
         };
       }
 
@@ -135,11 +136,18 @@ router.get('/', authenticateToken, async (req, res) => {
           if (submittedIds.includes(s.id)) return false;
           // Filter out expired surveys
           if (s.endDate && new Date(s.endDate) < now) return false;
-          // Filter: for students, survey must match user's class if survey.class is specified
-          if (userRole === 'Student' && s.class) {
+          // Filter: for students and alumni, survey must match user's class if survey.class is specified
+          if (['Student', 'Alumnus'].includes(userRole) && s.class && s.class.trim() !== '') {
             if (!user.class) return false;
             const targetClasses = s.class.split(',').map(c => c.trim().toLowerCase());
             if (!targetClasses.includes(user.class.toLowerCase())) {
+              return false;
+            }
+          }
+          // Filter: for employers, check specific targeted email address lists in s.class if specified
+          if (userRole === 'Employer' && s.class && s.class.trim() !== '') {
+            const targetEmails = s.class.split(',').map(e => e.trim().toLowerCase());
+            if (!targetEmails.includes(user.email.toLowerCase())) {
               return false;
             }
           }
@@ -534,19 +542,28 @@ router.get('/:id/stats', authenticateToken, authorizeRoles('Manager'), async (re
       assignedWhere.roleId = { [Op.notIn]: excludedIds };
     }
 
-    // Apply survey school/department/class filters
+    // Apply survey school/department/class filters based on targetAudience compatibility
     if (survey.school) {
       assignedWhere.school = survey.school;
     }
-    if (survey.department) {
+    const canHaveDept = ['Student', 'Lecturer', 'Alumnus', 'All'].includes(survey.targetAudience);
+    if (survey.department && canHaveDept) {
       assignedWhere.department = survey.department;
     }
     if (survey.class) {
       const classes = survey.class.split(',').map(c => c.trim()).filter(Boolean);
-      if (classes.length > 1) {
-        assignedWhere.class = { [Op.in]: classes };
-      } else if (classes.length === 1) {
-        assignedWhere.class = classes[0];
+      if (classes.length > 0) {
+        if (survey.targetAudience === 'Employer') {
+          // For Employer, survey.class stores targeted emails
+          assignedWhere.email = { [Op.in]: classes };
+        } else if (['Student', 'Alumnus', 'All'].includes(survey.targetAudience)) {
+          // For Student/Alumnus, survey.class stores target classes
+          if (classes.length > 1) {
+            assignedWhere.class = { [Op.in]: classes };
+          } else if (classes.length === 1) {
+            assignedWhere.class = classes[0];
+          }
+        }
       }
     }
 
@@ -677,17 +694,24 @@ router.get('/:id/participants', authenticateToken, authorizeRoles('Manager'), as
       whereClause.school = survey.school;
     }
 
-    // Filter by department
-    if (survey.department) {
+    // Filter by department - Only apply to Student, Lecturer, Alumnus, All
+    const canHaveDept = ['Student', 'Lecturer', 'Alumnus', 'All'].includes(survey.targetAudience);
+    if (survey.department && canHaveDept) {
       whereClause.department = survey.department;
     }
 
-    // Filter by class (comma-separated list in survey, match user's class if provided)
+    // Filter by class/email
     if (survey.class) {
       const classes = survey.class.split(',').map(c => c.trim()).filter(Boolean);
       if (classes.length > 0) {
         const { Op } = require('sequelize');
-        whereClause.class = { [Op.in]: classes };
+        if (survey.targetAudience === 'Employer') {
+          // For Employer, survey.class stores targeted emails
+          whereClause.email = { [Op.in]: classes };
+        } else if (['Student', 'Alumnus', 'All'].includes(survey.targetAudience)) {
+          // For Student/Alumnus, survey.class stores target classes
+          whereClause.class = { [Op.in]: classes };
+        }
       }
     }
 
@@ -849,6 +873,28 @@ router.get('/:id/decision-support', authenticateToken, authorizeRoles('Manager')
   } catch (error) {
     console.error('Error generating decision support analytics:', error);
     res.status(500).json({ message: 'Lỗi tạo phân tích hỗ trợ ra quyết định.', error: error.message });
+  }
+});
+
+// 8. Delete survey response (User can delete their own history, Manager can delete any)
+router.delete('/responses/:responseId', authenticateToken, async (req, res) => {
+  try {
+    const { responseId } = req.params;
+    const response = await Response.findByPk(responseId);
+    if (!response) {
+      return res.status(404).json({ message: 'Không tìm thấy kết quả nộp khảo sát này.' });
+    }
+
+    // Check permissions: either the owner or a Manager
+    if (req.user.id !== response.userId && req.user.role !== 'Manager') {
+      return res.status(403).json({ message: 'Bạn không có quyền xóa lịch sử khảo sát này.' });
+    }
+
+    await response.destroy(); // Cascades deletes to Answers due to onDelete: CASCADE
+    res.json({ message: 'Xóa lịch sử khảo sát thành công!' });
+  } catch (error) {
+    console.error('Error deleting survey response:', error);
+    res.status(500).json({ message: 'Lỗi hệ thống khi xóa lịch sử khảo sát.', error: error.message });
   }
 });
 

@@ -15,15 +15,11 @@ const getSchoolFromEmail = (email) => {
   if (!domain) return null;
   const domainLower = domain.toLowerCase();
 
-  if (domainLower.endsWith('dau.edu.vn')) {
-    return 'Kiến trúc Đà Nẵng (DAU)';
-  }
-  if (domainLower.endsWith('vku.udn.vn')) {
-    return 'Việt Hàn (VKU)';
-  }
-  if (domainLower.endsWith('edu.vn') || domainLower.endsWith('gmail.com')) {
-    // Development / Testing fallback
-    return 'Kiến trúc Đà Nẵng (DAU)';
+  if (domainLower.endsWith('dau.edu.vn') || 
+      domainLower.endsWith('vku.udn.vn') || 
+      domainLower.endsWith('edu.vn') || 
+      domainLower.endsWith('gmail.com')) {
+    return 'Trường Đại học Kiến trúc Đà Nẵng';
   }
   return null;
 };

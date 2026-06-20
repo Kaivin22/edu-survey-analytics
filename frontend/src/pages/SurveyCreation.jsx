@@ -44,6 +44,25 @@ function SurveyCreation({ isEdit = false, user }) {
   const [dynamicSchools, setDynamicSchools] = useState([]);
   const [dynamicDepartments, setDynamicDepartments] = useState({});
   const [dynamicClasses, setDynamicClasses] = useState({});
+  const [registeredEmployers, setRegisteredEmployers] = useState([]);
+
+  useEffect(() => {
+    const fetchEmployers = async () => {
+      try {
+        const res = await fetch(`${API_URL}/users`, { headers: { Authorization: `Bearer ${token}` } });
+        if (res.ok) {
+          const data = await res.json();
+          const employersOnly = data.filter(u => u.role?.name === 'Employer' || u.roleId === 6);
+          setRegisteredEmployers(employersOnly);
+        }
+      } catch (err) {
+        console.error('Error fetching employers:', err);
+      }
+    };
+    if (token) {
+      fetchEmployers();
+    }
+  }, [token]);
 
   // Templates and Question Bank States
   const [templates, setTemplates] = useState([]);
@@ -318,18 +337,34 @@ function SurveyCreation({ isEdit = false, user }) {
                 onFocus={e => e.target.style.borderColor = '#6E9AE0'} onBlur={e => e.target.style.borderColor = '#D2DBEA'} />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-              {[
-                { label: 'Đối tượng mục tiêu', key: 'targetAudience', options: [['Student', 'Sinh viên'], ['Lecturer', 'Giảng viên'], ['Alumnus', 'Cựu sinh viên'], ['Employer', 'Nhà tuyển dụng'], ['All', 'Tất cả']] },
-                { label: 'Trạng thái', key: 'status', options: [['Draft', 'Bản nháp'], ['Active', 'Kích hoạt'], ['Closed', 'Đã đóng']] },
-              ].map(({ label, key, options }) => (
-                <div key={key}>
-                  <label className="block text-sm font-semibold mb-1 ml-1" style={{ color: '#2d4771' }}>{label}</label>
-                  <select value={form[key]} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
-                    className="w-full px-4 py-2.5 rounded-2xl border text-sm font-bold outline-none" style={selectStyle}>
-                    {options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                  </select>
-                </div>
-              ))}
+              <div>
+                <label className="block text-sm font-semibold mb-1 ml-1" style={{ color: '#2d4771' }}>Đối tượng mục tiêu</label>
+                <select
+                  value={form.targetAudience}
+                  onChange={e => setForm(f => ({ ...f, targetAudience: e.target.value, department: '', class: [] }))}
+                  className="w-full px-4 py-2.5 rounded-2xl border text-sm font-bold outline-none"
+                  style={selectStyle}
+                >
+                  <option value="Student">Sinh viên</option>
+                  <option value="Lecturer">Giảng viên</option>
+                  <option value="Alumnus">Cựu sinh viên</option>
+                  <option value="Employer">Nhà tuyển dụng</option>
+                  <option value="All">Tất cả</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-1 ml-1" style={{ color: '#2d4771' }}>Trạng thái</label>
+                <select
+                  value={form.status}
+                  onChange={e => setForm(f => ({ ...f, status: e.target.value }))}
+                  className="w-full px-4 py-2.5 rounded-2xl border text-sm font-bold outline-none"
+                  style={selectStyle}
+                >
+                  <option value="Draft">Bản nháp</option>
+                  <option value="Active">Kích hoạt</option>
+                  <option value="Closed">Đã đóng</option>
+                </select>
+              </div>
               <div>
                 <label className="block text-sm font-semibold mb-1 ml-1" style={{ color: '#2d4771' }}>Ngày giờ bắt đầu</label>
                 <input type="datetime-local" value={form.startDate} min={!isEdit ? toDatetimeLocalString(new Date()) : undefined} onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))}
@@ -344,47 +379,86 @@ function SurveyCreation({ isEdit = false, user }) {
 
             {/* School / Department / Class Targeting Filters */}
             <div className="pt-4 border-t border-dashed" style={{ borderColor: '#D2DBEA' }}>
-              <p className="text-xs font-bold uppercase tracking-wide mb-3" style={{ color: '#6E9AE0' }}>Phân quyền / Đối tượng khảo sát chi tiết (Tùy chọn)</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {form.targetAudience === 'Employer' ? (
                 <div>
-                  <label className="block text-sm font-semibold mb-1 ml-1" style={{ color: '#2d4771' }}>Khoa mục tiêu</label>
-                  <select
-                    value={form.department}
-                    onChange={e => setForm(f => ({ ...f, department: e.target.value, class: [] }))}
-                    className="w-full px-4 py-2.5 rounded-2xl border text-sm font-bold outline-none"
-                    style={selectStyle}
-                  >
-                    <option value="">Tất cả các khoa</option>
-                    {(dynamicDepartments[form.school || user?.school || ''] || []).map(d => (
-                      <option key={d} value={d}>{d}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold mb-1 ml-1" style={{ color: '#2d4771' }}>Lớp mục tiêu</label>
-                  <select
-                    multiple
-                    disabled={!form.department || form.targetAudience !== 'Student'}
-                    value={form.class}
-                    onChange={e => {
-                      const selectedValues = Array.from(e.target.selectedOptions, opt => opt.value);
-                      setForm(f => ({ ...f, class: selectedValues }));
-                    }}
-                    className="w-full px-4 py-2.5 rounded-2xl border text-sm font-bold outline-none disabled:opacity-50"
-                    style={{ ...selectStyle, minHeight: '90px' }}
-                  >
-                    {classes.map(cl => (
-                      <option key={cl} value={cl}>{cl}</option>
-                    ))}
-                  </select>
-                  {form.class.length > 0 && (
-                    <p className="text-xs mt-1 font-semibold" style={{ color: '#6E9AE0' }}>
-                      Đã chọn: {form.class.join(', ')}
-                    </p>
+                  <p className="text-xs font-bold uppercase tracking-wide mb-3" style={{ color: '#6E9AE0' }}>Chọn nhà tuyển dụng mục tiêu (Tùy chọn)</p>
+                  {registeredEmployers.length === 0 ? (
+                    <p className="text-xs italic text-slate-400">Không có nhà tuyển dụng nào đã đăng ký trong hệ thống.</p>
+                  ) : (
+                    <div className="p-4 rounded-2xl border bg-slate-50 space-y-2 max-h-44 overflow-y-auto" style={{ borderColor: '#D2DBEA' }}>
+                      {registeredEmployers.map(emp => {
+                        const isChecked = form.class.includes(emp.email);
+                        return (
+                          <label key={emp.id} className="flex items-center gap-2 cursor-pointer text-xs font-semibold" style={{ color: '#2d4771' }}>
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              className="w-4 h-4 rounded"
+                              style={{ accentColor: '#6E9AE0' }}
+                              onChange={() => {
+                                setForm(f => {
+                                  const nextClass = isChecked
+                                    ? f.class.filter(email => email !== emp.email)
+                                    : [...f.class, emp.email];
+                                  return { ...f, class: nextClass };
+                                });
+                              }}
+                            />
+                            <strong>{emp.fullName}</strong> ({emp.email})
+                          </label>
+                        );
+                      })}
+                    </div>
                   )}
+                  <p className="text-[10px] mt-1.5 text-slate-400 font-semibold leading-normal">
+                    * Nếu không chọn nhà tuyển dụng nào, hệ thống sẽ mặc định gửi cho tất cả nhà tuyển dụng.
+                  </p>
                 </div>
-              </div>
+              ) : (
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide mb-3" style={{ color: '#6E9AE0' }}>Phân quyền / Đối tượng khảo sát chi tiết (Tùy chọn)</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold mb-1 ml-1" style={{ color: '#2d4771' }}>Khoa mục tiêu</label>
+                      <select
+                        value={form.department}
+                        onChange={e => setForm(f => ({ ...f, department: e.target.value, class: [] }))}
+                        className="w-full px-4 py-2.5 rounded-2xl border text-sm font-bold outline-none"
+                        style={selectStyle}
+                      >
+                        <option value="">Tất cả các khoa</option>
+                        {(dynamicDepartments[form.school || user?.school || ''] || []).map(d => (
+                          <option key={d} value={d}>{d}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold mb-1 ml-1" style={{ color: '#2d4771' }}>Lớp mục tiêu</label>
+                      <select
+                        multiple
+                        disabled={!form.department || !['Student', 'Alumnus'].includes(form.targetAudience)}
+                        value={form.class}
+                        onChange={e => {
+                          const selectedValues = Array.from(e.target.selectedOptions, opt => opt.value);
+                          setForm(f => ({ ...f, class: selectedValues }));
+                        }}
+                        className="w-full px-4 py-2.5 rounded-2xl border text-sm font-bold outline-none disabled:opacity-50"
+                        style={{ ...selectStyle, minHeight: '90px' }}
+                      >
+                        {classes.map(cl => (
+                          <option key={cl} value={cl}>{cl}</option>
+                        ))}
+                      </select>
+                      {form.class.length > 0 && (
+                        <p className="text-xs mt-1 font-semibold" style={{ color: '#6E9AE0' }}>
+                          Đã chọn: {form.class.join(', ')}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -125,6 +125,15 @@ async function seed() {
         roleId: 6, // Employer
         school: 'Trường Đại học Kiến trúc Đà Nẵng',
         status: 'Active'
+      },
+      {
+        email: 'employer2@edu.vn',
+        password: hashedPassword,
+        fullName: 'Viettel Group',
+        code: 'NTD_02',
+        roleId: 6, // Employer
+        school: 'Trường Đại học Kiến trúc Đà Nẵng',
+        status: 'Active'
       }
     ]);
     console.log('Demo Users seeded.');
