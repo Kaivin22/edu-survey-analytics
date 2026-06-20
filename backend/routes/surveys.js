@@ -652,6 +652,8 @@ router.get('/:id/stats', authenticateToken, authorizeRoles('Manager'), async (re
       school: survey.school,
       department: survey.department,
       class: survey.class,
+      startDate: survey.startDate,
+      endDate: survey.endDate,
       totalResponses,
       totalAssigned,
       stats

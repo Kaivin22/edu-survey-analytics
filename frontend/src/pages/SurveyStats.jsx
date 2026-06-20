@@ -380,9 +380,21 @@ function SurveyStats({ user }) {
                   ))}
                 </div>
 
-                {/* Survey description */}
-                <div className="p-5 rounded-2xl border" style={{ background: '#EEF4FD', borderColor: 'rgba(110,154,224,0.3)' }}>
-                  <p className="text-sm font-semibold text-[#2d4771]">{stats.description || 'Không có mô tả.'}</p>
+                {/* Survey description & dates */}
+                <div className="p-5 rounded-2xl border flex flex-col md:flex-row md:items-center md:justify-between gap-4" style={{ background: '#EEF4FD', borderColor: 'rgba(110,154,224,0.3)' }}>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-[#2d4771]">{stats.description || 'Không có mô tả.'}</p>
+                  </div>
+                  <div className="flex flex-col gap-1.5 min-w-[200px] border-t md:border-t-0 md:border-l pt-3 md:pt-0 md:pl-4 border-dashed" style={{ borderColor: 'rgba(110,154,224,0.4)' }}>
+                    <div className="flex items-center gap-2 text-xs font-bold text-[#487bc9]">
+                      <Clock size={14} />
+                      <span>Bắt đầu: {stats.startDate ? new Date(stats.startDate).toLocaleDateString('vi-VN') : '—'}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs font-bold text-[#dc2626]">
+                      <Clock size={14} />
+                      <span>Kết thúc: {stats.endDate ? new Date(stats.endDate).toLocaleDateString('vi-VN') : '—'}</span>
+                    </div>
+                  </div>
                 </div>
 
                 {/* No responses */}

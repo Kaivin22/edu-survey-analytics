@@ -118,6 +118,7 @@ router.get('/:surveyId/excel', authenticateToken, authorizeRoles(['Admin', 'Mana
     sheet1.addRow(['Mô tả:', survey.description || 'Không có mô tả']);
     sheet1.addRow(['Đối tượng tham gia:', survey.targetAudience]);
     sheet1.addRow(['Trạng thái:', survey.status]);
+    sheet1.addRow(['Thời gian bắt đầu:', survey.startDate ? new Date(survey.startDate).toLocaleDateString('vi-VN') : 'N/A']);
     sheet1.addRow(['Thời gian kết thúc:', survey.endDate ? new Date(survey.endDate).toLocaleDateString('vi-VN') : 'N/A']);
     sheet1.addRow(['Tổng số người đã tham gia:', responses.length]).font = { bold: true, color: { argb: 'FFC00000' } };
     sheet1.addRow([]);
@@ -212,6 +213,18 @@ router.get('/:surveyId/word', authenticateToken, authorizeRoles(['Admin', 'Manag
       children: [
         new TextRun({ text: 'Đối tượng: ', bold: true }),
         new TextRun({ text: survey.targetAudience || 'Tất cả' })
+      ], spacing: { after: 120 }
+    }));
+    children.push(new Paragraph({
+      children: [
+        new TextRun({ text: 'Thời gian bắt đầu: ', bold: true }),
+        new TextRun({ text: survey.startDate ? new Date(survey.startDate).toLocaleDateString('vi-VN') : 'N/A' })
+      ], spacing: { after: 120 }
+    }));
+    children.push(new Paragraph({
+      children: [
+        new TextRun({ text: 'Thời gian kết thúc: ', bold: true }),
+        new TextRun({ text: survey.endDate ? new Date(survey.endDate).toLocaleDateString('vi-VN') : 'N/A' })
       ], spacing: { after: 120 }
     }));
     children.push(new Paragraph({
@@ -352,15 +365,17 @@ router.get('/:surveyId/pdf', authenticateToken, authorizeRoles(['Admin', 'Manage
 
     // ── Info box ──
     const infoY = doc.y;
-    doc.rect(50, infoY, doc.page.width - 100, 70).fillAndStroke('#EEF4FD', '#D2DBEA');
+    doc.rect(50, infoY, doc.page.width - 100, 85).fillAndStroke('#EEF4FD', '#D2DBEA');
     doc.fillColor('#2d4771').font('Arial-Bold').fontSize(10);
     doc.text(`Đối tượng: ${survey.targetAudience || 'Tất cả'}`, 65, infoY + 10);
-    doc.text(`Trạng thái: ${survey.status}`, 65, infoY + 28);
-    doc.text(`Tổng số phản hồi: ${responses.length} lượt`, 65, infoY + 46);
+    doc.text(`Trạng thái: ${survey.status}`, 65, infoY + 26);
+    doc.text(`Bắt đầu: ${survey.startDate ? new Date(survey.startDate).toLocaleDateString('vi-VN') : 'N/A'}`, 65, infoY + 42);
+    doc.text(`Kết thúc: ${survey.endDate ? new Date(survey.endDate).toLocaleDateString('vi-VN') : 'N/A'}`, 65, infoY + 58);
+    doc.text(`Tổng số phản hồi: ${responses.length} lượt`, 65, infoY + 74);
     doc.text(`Ngày xuất báo cáo: ${new Date().toLocaleDateString('vi-VN')}`, 300, infoY + 10);
-    doc.text(`Người xuất: ${req.user.fullName}`, 300, infoY + 28);
+    doc.text(`Người xuất: ${req.user.fullName}`, 300, infoY + 26);
 
-    doc.moveDown(4.5);
+    doc.moveDown(5.5);
 
     // ── Questions ──
     doc.fillColor('#1F497D').font('Arial-Bold').fontSize(13)

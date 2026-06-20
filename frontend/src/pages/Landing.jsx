@@ -93,7 +93,7 @@ function smoothScroll(e, href) {
 
 export default function Landing({ user, onLogout }) {
   const [scrolled, setScrolled] = useState(false);
-  const [formData, setFormData] = useState({ name: '', email: '', message: '' });
+  const [formData, setFormData] = useState({ name: '', email: '', subject: '', message: '' });
   const [loadingContact, setLoadingContact] = useState(false);
   const [contactError, setContactError] = useState('');
   const [formSent, setFormSent] = useState(false);
@@ -111,18 +111,23 @@ export default function Landing({ user, onLogout }) {
     setContactError('');
     setFormSent(false);
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/auth/contact`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/tickets/public`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({
+          guestName: formData.name,
+          guestEmail: formData.email,
+          subject: formData.subject,
+          message: formData.message
+        })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
       setFormSent(true);
-      setFormData({ name: '', email: '', message: '' });
+      setFormData({ name: '', email: '', subject: '', message: '' });
       setTimeout(() => setFormSent(false), 5000);
     } catch (err) {
-      setContactError(err.message || 'Lỗi gửi tin nhắn liên hệ.');
+      setContactError(err.message || 'Lỗi gửi yêu cầu hỗ trợ.');
     } finally {
       setLoadingContact(false);
     }
@@ -382,9 +387,14 @@ export default function Landing({ user, onLogout }) {
                   ❌ {contactError}
                 </div>
               )}
-              {['name', 'email', 'message'].map(field => {
+              {['name', 'email', 'subject', 'message'].map(field => {
                 const isTextArea = field === 'message';
-                const labels = { name: 'Họ và tên', email: 'Địa chỉ email', message: 'Nội dung tin nhắn' };
+                const labels = { 
+                  name: 'Họ và tên *', 
+                  email: 'Địa chỉ email *', 
+                  subject: 'Tiêu đề sự cố / Chủ đề *', 
+                  message: 'Nội dung chi tiết sự cố *' 
+                };
                 const Tag = isTextArea ? 'textarea' : 'input';
                 return (
                   <div key={field} style={{ marginBottom: 16 }}>
@@ -403,7 +413,7 @@ export default function Landing({ user, onLogout }) {
                 );
               })}
               <button type="submit" disabled={loadingContact} style={{ width: '100%', padding: '12px', borderRadius: 12, background: 'linear-gradient(135deg, #6E9AE0, #487bc9)', color: '#fff', fontWeight: 700, fontSize: 15, border: 'none', cursor: loadingContact ? 'not-allowed' : 'pointer', opacity: loadingContact ? 0.8 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 4px 14px rgba(110,154,224,0.45)' }}>
-                {loadingContact ? 'Đang gửi...' : 'Gửi tin nhắn'}
+                {loadingContact ? 'Đang gửi...' : 'Gửi yêu cầu hỗ trợ'}
               </button>
             </form>
           </div>

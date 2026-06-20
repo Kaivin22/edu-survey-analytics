@@ -315,6 +315,14 @@ const SupportTicket = sequelize.define('SupportTicket', {
   reply: {
     type: DataTypes.TEXT,
     allowNull: true
+  },
+  guestName: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  guestEmail: {
+    type: DataTypes.STRING,
+    allowNull: true
   }
 });
 

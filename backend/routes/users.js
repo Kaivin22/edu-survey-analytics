@@ -63,10 +63,6 @@ router.post('/', authenticateToken, authorizeRoles('Manager'), async (req, res) 
       return res.status(403).json({ message: 'Bạn chỉ có thể tạo tài khoản trong trường của mình.' });
     }
 
-    // Block Manager from creating another Manager account
-    if (parseInt(roleId) === 2) {
-      return res.status(403).json({ message: 'Bạn không có quyền tạo tài khoản Cán bộ quản lý.' });
-    }
 
     const codeError = validateCode(code, roleId);
     if (codeError) {
@@ -118,14 +114,9 @@ router.put('/:id', authenticateToken, authorizeRoles('Manager'), async (req, res
       return res.status(403).json({ message: 'Bạn chỉ có thể chỉnh sửa tài khoản trong trường của mình.' });
     }
 
-    // Block Manager from editing other Manager accounts
-    if (user.roleId === 2) {
-      return res.status(403).json({ message: 'Bạn không có quyền chỉnh sửa tài khoản Cán bộ quản lý.' });
-    }
-
-    // Block Manager from upgrading a user to Manager
-    if (roleId && parseInt(roleId) === 2) {
-      return res.status(403).json({ message: 'Bạn không có quyền cấp vai trò Cán bộ quản lý.' });
+    // Block Manager from changing their own role
+    if (user.id === req.user.id && roleId && parseInt(roleId) !== user.roleId) {
+      return res.status(400).json({ message: 'Bạn không thể tự thay đổi vai trò của chính mình.' });
     }
 
     const targetRoleId = roleId || user.roleId;
@@ -181,14 +172,9 @@ router.put('/:id/role', authenticateToken, authorizeRoles('Manager'), async (req
       return res.status(403).json({ message: 'Bạn chỉ có thể thay đổi vai trò của người dùng trong trường của mình.' });
     }
 
-    // Block Manager from changing role of Manager accounts
-    if (user.roleId === 2) {
-      return res.status(403).json({ message: 'Bạn không có quyền thay đổi vai trò của tài khoản Cán bộ quản lý.' });
-    }
-
-    // Block Manager from upgrading a user to Manager
-    if (parseInt(roleId) === 2) {
-      return res.status(403).json({ message: 'Bạn không có quyền cấp vai trò Cán bộ quản lý.' });
+    // Block Manager from changing their own role
+    if (user.id === req.user.id && parseInt(roleId) !== user.roleId) {
+      return res.status(400).json({ message: 'Bạn không thể tự thay đổi vai trò của chính mình.' });
     }
 
     const role = await Role.findByPk(roleId);
@@ -222,10 +208,6 @@ router.put('/:id/approve', authenticateToken, authorizeRoles('Manager'), async (
       return res.status(403).json({ message: 'Bạn chỉ có thể phê duyệt tài khoản trong trường của mình.' });
     }
 
-    // Block Manager from approving other Manager accounts
-    if (user.roleId === 2) {
-      return res.status(403).json({ message: 'Bạn không có quyền phê duyệt tài khoản Cán bộ quản lý.' });
-    }
 
     user.status = 'Active';
     await user.save();
@@ -253,10 +235,6 @@ router.delete('/:id', authenticateToken, authorizeRoles('Manager'), async (req, 
       return res.status(403).json({ message: 'Bạn chỉ có thể xóa tài khoản trong trường của mình.' });
     }
 
-    // Block Manager from deleting other Manager accounts
-    if (user.roleId === 2) {
-      return res.status(403).json({ message: 'Bạn không có quyền xóa tài khoản Cán bộ quản lý.' });
-    }
 
     await user.destroy();
     res.json({ message: 'Xóa tài khoản thành công!' });

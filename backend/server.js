@@ -73,7 +73,9 @@ async function runManualMigrations(sequelize) {
         'ALTER TABLE "Surveys" ADD COLUMN IF NOT EXISTS "school" VARCHAR(255);',
         'ALTER TABLE "Surveys" ADD COLUMN IF NOT EXISTS "department" VARCHAR(255);',
         'ALTER TABLE "Surveys" ADD COLUMN IF NOT EXISTS "class" VARCHAR(255);',
-        'ALTER TABLE "Questions" ADD COLUMN IF NOT EXISTS "category" VARCHAR(255);'
+        'ALTER TABLE "Questions" ADD COLUMN IF NOT EXISTS "category" VARCHAR(255);',
+        'ALTER TABLE "SupportTickets" ADD COLUMN IF NOT EXISTS "guestName" VARCHAR(255);',
+        'ALTER TABLE "SupportTickets" ADD COLUMN IF NOT EXISTS "guestEmail" VARCHAR(255);'
       ];
       for (const q of queries) {
         try {
@@ -90,7 +92,9 @@ async function runManualMigrations(sequelize) {
         { table: 'Surveys', column: 'school', type: 'VARCHAR(255)' },
         { table: 'Surveys', column: 'department', type: 'VARCHAR(255)' },
         { table: 'Surveys', column: 'class', type: 'VARCHAR(255)' },
-        { table: 'Questions', column: 'category', type: 'VARCHAR(255)' }
+        { table: 'Questions', column: 'category', type: 'VARCHAR(255)' },
+        { table: 'SupportTickets', column: 'guestName', type: 'VARCHAR(255)' },
+        { table: 'SupportTickets', column: 'guestEmail', type: 'VARCHAR(255)' }
       ];
       for (const m of migrations) {
         try {

@@ -107,15 +107,18 @@ Khi cơ sở dữ liệu được khởi tạo, hệ thống sẽ tự động t
 PORT=5000
 DB_DIALECT=sqlite
 DB_STORAGE=./data/database.sqlite
-JWT_SECRET=edu_survey_stakeholder_secret_key_2026
+JWT_SECRET=your_jwt_secret_key
 FRONTEND_URL=http://localhost:3000
 
-# SMTP gửi email (Sử dụng Mật khẩu ứng dụng - App Password của Google)
+# Cấu hình Email gửi đi: Ưu tiên Resend API (cho deploy Render), hoặc SMTP (cho local/dev)
+RESEND_API_KEY=your_resend_api_key_here
+
+# Cấu hình SMTP (dùng nếu chạy local hoặc không cấu hình Resend)
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=465
-SMTP_USER=tuan_2251220274@dau.edu.vn
-SMTP_PASS=pcqtfzhlmdcrjefj
-SMTP_FROM="ĐBCL - Đại học Kiến trúc Đà Nẵng" <tuan_2251220274@dau.edu.vn>
+SMTP_USER=your_email@gmail.com
+SMTP_PASS=your_gmail_app_password
+SMTP_FROM="ĐBCL - Đại học Kiến trúc Đà Nẵng" <your_email@gmail.com>
 ```
 
 ### Frontend (frontend/.env)
