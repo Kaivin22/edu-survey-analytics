@@ -11,7 +11,7 @@ const CLASSES = {};
 
 
 
-const ROLE_LABELS = { Admin:'Quản trị viên', Manager:'Cán bộ quản lý', Student:'Sinh viên', Lecturer:'Giảng viên', Alumnus:'Cựu sinh viên', Employer:'Nhà tuyển dụng' };
+const ROLE_LABELS = { Manager:'Cán bộ quản lý', Student:'Sinh viên', Lecturer:'Giảng viên', Alumnus:'Cựu sinh viên', Employer:'Nhà tuyển dụng' };
 
 // ── JWT DECODER HELPER ──
 const decodeJwt = (token) => {

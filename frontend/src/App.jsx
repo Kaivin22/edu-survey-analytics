@@ -77,7 +77,7 @@ function App() {
           path="/dashboard"
           element={
             user ? (
-              ['Admin', 'Manager'].includes(user.role) ? (
+              user.role === 'Manager' ? (
                 <AdminDashboard user={user} onLogout={logout} onUpdateUser={updateUser} />
               ) : (
                 <Dashboard user={user} onLogout={logout} onUpdateUser={updateUser} />
@@ -98,7 +98,7 @@ function App() {
         <Route
           path="/survey/:id/stats"
           element={
-            user && ['Admin', 'Manager'].includes(user.role) ? (
+            user && user.role === 'Manager' ? (
               <SurveyStats user={user} onLogout={logout} />
             ) : (
               <Navigate to="/login" replace />
@@ -110,7 +110,7 @@ function App() {
         <Route
           path="/support-tickets"
           element={
-            user && ['Admin', 'Manager'].includes(user.role) ? (
+            user && user.role === 'Manager' ? (
               <SupportManagement user={user} onLogout={logout} />
             ) : (
               <Navigate to="/login" replace />
@@ -122,7 +122,7 @@ function App() {
         <Route
           path="/survey/create"
           element={
-            user && ['Admin', 'Manager'].includes(user.role) ? (
+            user && user.role === 'Manager' ? (
               <SurveyCreation user={user} onLogout={logout} />
             ) : (
               <Navigate to="/login" replace />
@@ -132,7 +132,7 @@ function App() {
         <Route
           path="/survey/edit/:id"
           element={
-            user && ['Admin', 'Manager'].includes(user.role) ? (
+            user && user.role === 'Manager' ? (
               <SurveyCreation user={user} onLogout={logout} isEdit={true} />
             ) : (
               <Navigate to="/login" replace />

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, MessageSquare, Clock, CheckCircle, AlertCircle, HelpCircle, Send, User } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-const ROLE_LABELS = { Student: 'Sinh viên', Lecturer: 'Giảng viên', Alumnus: 'Cựu sinh viên', Employer: 'Nhà tuyển dụng', Admin: 'Quản trị viên', Manager: 'Cán bộ quản lý' };
+const ROLE_LABELS = { Student: 'Sinh viên', Lecturer: 'Giảng viên', Alumnus: 'Cựu sinh viên', Employer: 'Nhà tuyển dụng', Manager: 'Cán bộ quản lý' };
 
 const STATUS_OPTIONS = [
   { id: 'all', label: 'Tất cả' },

@@ -479,8 +479,8 @@ router.post('/google-register', async (req, res) => {
 
     const parsedRoleId = parseInt(roleId);
 
-    if (parsedRoleId === 1 || parsedRoleId === 2) {
-      return res.status(403).json({ message: 'Không thể đăng ký tài khoản Quản trị viên hoặc Cán bộ quản lý công khai.' });
+    if (parsedRoleId === 2) {
+      return res.status(403).json({ message: 'Không thể đăng ký tài khoản Cán bộ quản lý công khai.' });
     }
 
     // For Student/Lecturer/Alumnus (roleId 3,4,5): require school-domain email
@@ -565,12 +565,12 @@ router.post('/contact', async (req, res) => {
     const adminEmail = process.env.ADMIN_EMAIL || 'trankimlien31072004@gmail.com';
 
     const mailOptions = {
-      from: process.env.SMTP_FROM || '"Academic Synergy" <your-email@gmail.com>',
+      from: process.env.SMTP_FROM || '"ĐBCL - Đại học Kiến trúc Đà Nẵng" <your-email@gmail.com>',
       to: adminEmail,
       subject: `[Liên hệ] ${subject || 'Tin nhắn mới từ ' + name}`,
       html: `
         <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 25px; border: 1px solid #D2DBEA; border-radius: 16px; background-color: #F9FAFD;">
-          <h2 style="color: #6E9AE0; margin-top: 0; text-align: center;">Academic Synergy - Tin nhắn Liên hệ</h2>
+          <h2 style="color: #6E9AE0; margin-top: 0; text-align: center;">ĐBCL - Đại học Kiến trúc Đà Nẵng - Tin nhắn Liên hệ</h2>
           <hr style="border: 0; border-top: 1px solid #D2DBEA; margin: 20px 0;">
           <p><strong>Họ tên:</strong> ${name}</p>
           <p><strong>Email:</strong> ${email}</p>
@@ -581,7 +581,7 @@ router.post('/contact', async (req, res) => {
             <p style="white-space: pre-wrap; color: #2d4771;">${message}</p>
           </div>
           <hr style="border: 0; border-top: 1px solid #D2DBEA; margin: 20px 0;">
-          <p style="font-size: 12px; color: #A0AEC0; text-align: center;">Email này được gửi tự động từ hệ thống Academic Synergy © ${new Date().getFullYear()}</p>
+          <p style="font-size: 12px; color: #A0AEC0; text-align: center;">Email này được gửi tự động từ hệ thống ĐBCL - Đại học Kiến trúc Đà Nẵng © ${new Date().getFullYear()}</p>
         </div>
       `
     };

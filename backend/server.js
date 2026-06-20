@@ -154,7 +154,7 @@ async function startServer() {
         await seed();
       } else {
         console.log('Syncing database schema...');
-        await sequelize.sync({ alter: true });
+        await sequelize.sync();
         console.log('Database schema synchronized.');
 
         try {
@@ -171,35 +171,30 @@ async function startServer() {
       }
     }
 
-    // Ensure at least one Admin user exists (Genesis Admin)
+    // Ensure at least one Manager user exists (Genesis Manager)
     try {
       const { User } = require('./models');
-      const adminExists = await User.findOne({ where: { roleId: 1 } });
-      if (!adminExists) {
-        console.log('No Admin account found in database. Creating genesis Admin...');
+      const managerExists = await User.findOne({ where: { roleId: 2 } });
+      if (!managerExists) {
+        console.log('No Manager account found in database. Creating genesis Manager...');
         const bcrypt = require('bcryptjs');
-        const adminEmail = process.env.ADMIN_EMAIL || 'trankimlien31072004@gmail.com';
-        const adminPassword = process.env.ADMIN_PASSWORD || '12345678';
-        const hashedPw = await bcrypt.hash(adminPassword, 10);
+        const managerEmail = process.env.ADMIN_EMAIL || 'trankimlien31072004@gmail.com';
+        const managerPassword = process.env.ADMIN_PASSWORD || '12345678';
+        const hashedPw = await bcrypt.hash(managerPassword, 10);
         await User.create({
-          email: adminEmail,
+          email: managerEmail,
           password: hashedPw,
-          fullName: 'Nguyễn Quản Trị',
-          code: 'ADMIN001',
-          roleId: 1,
-          school: 'Kiến trúc Đà Nẵng (DAU)',
-          department: 'Công nghệ thông tin',
+          fullName: 'Cán bộ Quản lý ĐBCL',
+          code: 'CB_DBCL_01',
+          roleId: 2,
+          school: 'Trường Đại học Kiến trúc Đà Nẵng',
+          department: 'Khoa Công nghệ thông tin',
           status: 'Active'
         });
-        console.log(`Genesis Admin created successfully: ${adminEmail}`);
-      } else if (adminExists.email === 'admin@edu.vn') {
-        // Double check: if by some chance the old admin is still here, update it to the new email
-        console.log('Updating legacy admin email to trankimlien31072004@gmail.com...');
-        adminExists.email = 'trankimlien31072004@gmail.com';
-        await adminExists.save();
+        console.log(`Genesis Manager created successfully: ${managerEmail}`);
       }
     } catch (dbError) {
-      console.error('Error checking/creating genesis Admin account:', dbError);
+      console.error('Error checking/creating genesis Manager account:', dbError);
     }
 
     // Auto-close expired surveys on startup and periodically (every 5 minutes)

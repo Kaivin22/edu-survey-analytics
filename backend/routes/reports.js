@@ -425,7 +425,7 @@ router.get('/:surveyId/pdf', authenticateToken, authorizeRoles(['Admin', 'Manage
     for (let i = range.start; i < range.start + range.count; i++) {
       doc.switchToPage(i);
       doc.fillColor('#aaa').font('Arial').fontSize(8)
-        .text(`Academic Synergy © ${new Date().getFullYear()} — Trang ${i + 1}/${range.count}`, 50, doc.page.height - 40, { align: 'center', lineBreak: false });
+        .text(`ĐBCL - Đại học Kiến trúc Đà Nẵng © ${new Date().getFullYear()} — Trang ${i + 1}/${range.count}`, 50, doc.page.height - 40, { align: 'center', lineBreak: false });
     }
 
     doc.end();
