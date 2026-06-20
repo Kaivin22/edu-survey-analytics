@@ -101,7 +101,11 @@ function ExportDropdown({ surveyId, token, filters }) {
 }
 
 function FilterBar({ filters, onChange, onClear, dynamicSchools = [], dynamicDepartments = {}, dynamicClasses = {}, targetAudience }) {
-  const depts = filters.school ? (dynamicDepartments[filters.school] || []) : [];
+  const depts = 
+    (filters.school && dynamicDepartments[filters.school]) || 
+    (dynamicSchools.length > 0 && dynamicDepartments[dynamicSchools[0]]) || 
+    Array.from(new Set(Object.values(dynamicDepartments).flat())) || 
+    [];
   const classes = filters.department ? (dynamicClasses[filters.department] || []) : [];
   const hasFilter = filters.school || filters.department || filters.class;
   const showClassFilter = !targetAudience || ['Student', 'Alumnus', 'All'].includes(targetAudience);
@@ -160,7 +164,7 @@ function SurveyStats({ user }) {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [filters, setFilters] = useState({ school: user?.school || '', department: '', class: '' });
+  const [filters, setFilters] = useState({ school: '', department: '', class: '' });
   const token = localStorage.getItem('token');
 
   // Tabs states
@@ -261,7 +265,7 @@ function SurveyStats({ user }) {
   };
 
   const handleFilterChange = (newFilters) => { setFilters(newFilters); };
-  const handleFilterClear  = () => setFilters({ school: user?.school || '', department: '', class: '' });
+  const handleFilterClear  = () => setFilters({ school: '', department: '', class: '' });
 
   // Filter participants in javascript
   const filteredParticipants = participants.filter(p => {

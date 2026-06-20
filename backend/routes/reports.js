@@ -18,14 +18,8 @@ const {
 } = require('../models');
 const { authenticateToken, authorizeRoles } = require('../middleware/auth');
 
-// Helper: Check Manager school access
+// Helper: Check Manager school access (always allowed for single-school system)
 async function checkManagerSchoolAccess(req, survey) {
-  if (req.user.role === 'Manager') {
-    const manager = await User.findByPk(req.user.id);
-    if (manager && manager.school && survey.school && survey.school !== manager.school) {
-      return false;
-    }
-  }
   return true;
 }
 
@@ -91,7 +85,7 @@ function getAnswerText(ans, q) {
 // ─────────────────────────────────────────────────────────
 // Route 1: Export Excel
 // ─────────────────────────────────────────────────────────
-router.get('/:surveyId/excel', authenticateToken, authorizeRoles(['Admin', 'Manager']), async (req, res) => {
+router.get('/:surveyId/excel', authenticateToken, authorizeRoles('Manager'), async (req, res) => {
   try {
     const { school, department, class: classVal } = req.query;
     const { survey, responses } = await getSurveyData(req.params.surveyId, { school, department, class: classVal });
@@ -178,7 +172,7 @@ router.get('/:surveyId/excel', authenticateToken, authorizeRoles(['Admin', 'Mana
 // ─────────────────────────────────────────────────────────
 // Route 2: Export Word (.docx)
 // ─────────────────────────────────────────────────────────
-router.get('/:surveyId/word', authenticateToken, authorizeRoles(['Admin', 'Manager']), async (req, res) => {
+router.get('/:surveyId/word', authenticateToken, authorizeRoles('Manager'), async (req, res) => {
   try {
     const { school, department, class: classVal } = req.query;
     const { survey, responses } = await getSurveyData(req.params.surveyId, { school, department, class: classVal });
@@ -325,7 +319,7 @@ router.get('/:surveyId/word', authenticateToken, authorizeRoles(['Admin', 'Manag
 // ─────────────────────────────────────────────────────────
 // Route 3: Export PDF
 // ─────────────────────────────────────────────────────────
-router.get('/:surveyId/pdf', authenticateToken, authorizeRoles(['Admin', 'Manager']), async (req, res) => {
+router.get('/:surveyId/pdf', authenticateToken, authorizeRoles('Manager'), async (req, res) => {
   try {
     const { school, department, class: classVal } = req.query;
     const { survey, responses } = await getSurveyData(req.params.surveyId, { school, department, class: classVal });

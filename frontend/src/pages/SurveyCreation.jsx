@@ -266,7 +266,12 @@ function SurveyCreation({ isEdit = false, user }) {
   };
 
   const selectStyle = { ...inputBase, appearance: 'none' };
-  const depts = form.school ? (dynamicDepartments[form.school] || []) : [];
+  const depts = 
+    (form.school && dynamicDepartments[form.school]) || 
+    (user?.school && dynamicDepartments[user.school]) || 
+    (dynamicSchools.length > 0 && dynamicDepartments[dynamicSchools[0]]) || 
+    Array.from(new Set(Object.values(dynamicDepartments).flat())) || 
+    [];
   const classes = form.department ? (dynamicClasses[form.department] || []) : [];
 
   return (
@@ -427,7 +432,7 @@ function SurveyCreation({ isEdit = false, user }) {
                         style={selectStyle}
                       >
                         <option value="">Tất cả các khoa</option>
-                        {(dynamicDepartments[form.school || user?.school || ''] || []).map(d => (
+                        {depts.map(d => (
                           <option key={d} value={d}>{d}</option>
                         ))}
                       </select>

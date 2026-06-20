@@ -20,16 +20,16 @@ const validateCode = (code, roleIdOrName) => {
   return null;
 };
 
-// 1. Get all users (Manager sees users in their school)
-router.get('/', authenticateToken, authorizeRoles('Manager'), async (req, res) => {
+// 1. Get all users (Admin sees all, Manager only sees Employer)
+router.get('/', authenticateToken, authorizeRoles(['Admin', 'Manager']), async (req, res) => {
   try {
     const whereClause = {};
 
-    const manager = await User.findByPk(req.user.id);
-    if (manager && manager.school) {
-      whereClause.school = manager.school;
-    } else {
-      return res.json([]);
+    if (req.user.role === 'Manager') {
+      // Manager can only see Employer accounts
+      whereClause.roleId = 6;
+    } else if (req.user.role !== 'Admin') {
+      return res.status(403).json({ message: 'Không có quyền truy cập.' });
     }
 
     const users = await User.findAll({
@@ -44,25 +44,19 @@ router.get('/', authenticateToken, authorizeRoles('Manager'), async (req, res) =
   }
 });
 
-// 2. Create User (Manager)
-router.post('/', authenticateToken, authorizeRoles('Manager'), async (req, res) => {
+// 2. Create User (Admin only)
+router.post('/', authenticateToken, authorizeRoles('Admin'), async (req, res) => {
   try {
-    const { email, password, fullName, code, roleId, school, department, class: classVal } = req.body;
+    const { email, password, fullName, code, roleId, department, class: classVal } = req.body;
 
     if (!email || !password || !fullName || !roleId) {
       return res.status(400).json({ message: 'Vui lòng cung cấp đầy đủ thông tin bắt buộc.' });
     }
 
-    const manager = await User.findByPk(req.user.id);
-    if (!manager || !manager.school) {
-      return res.status(403).json({ message: 'Không xác định được trường của bạn.' });
+    const admin = await User.findByPk(req.user.id);
+    if (!admin) {
+      return res.status(403).json({ message: 'Không xác định được thông tin quản trị viên.' });
     }
-
-    // Force the school to be manager's school
-    if (school && school !== manager.school) {
-      return res.status(403).json({ message: 'Bạn chỉ có thể tạo tài khoản trong trường của mình.' });
-    }
-
 
     const codeError = validateCode(code, roleId);
     if (codeError) {
@@ -87,7 +81,7 @@ router.post('/', authenticateToken, authorizeRoles('Manager'), async (req, res) 
       fullName,
       code: code || null,
       roleId,
-      school: manager.school,
+      school: admin.school || 'Trường Đại học Kiến trúc Đà Nẵng',
       department: department || null,
       class: classVal || null,
       status: 'Active'
@@ -99,22 +93,22 @@ router.post('/', authenticateToken, authorizeRoles('Manager'), async (req, res) 
   }
 });
 
-// 2.1 Edit User details (Manager)
-router.put('/:id', authenticateToken, authorizeRoles('Manager'), async (req, res) => {
+// 2.1 Edit User details (Admin only)
+router.put('/:id', authenticateToken, authorizeRoles('Admin'), async (req, res) => {
   try {
-    const { email, password, fullName, code, roleId, school, department, class: classVal } = req.body;
+    const { email, password, fullName, code, roleId, department, class: classVal } = req.body;
     const user = await User.findByPk(req.params.id);
 
     if (!user) {
       return res.status(404).json({ message: 'Không tìm thấy tài khoản.' });
     }
 
-    const manager = await User.findByPk(req.user.id);
-    if (!manager || user.school !== manager.school) {
-      return res.status(403).json({ message: 'Bạn chỉ có thể chỉnh sửa tài khoản trong trường của mình.' });
+    const admin = await User.findByPk(req.user.id);
+    if (!admin) {
+      return res.status(403).json({ message: 'Không xác định được thông tin quản trị viên.' });
     }
 
-    // Block Manager from changing their own role
+    // Block from changing their own role
     if (user.id === req.user.id && roleId && parseInt(roleId) !== user.roleId) {
       return res.status(400).json({ message: 'Bạn không thể tự thay đổi vai trò của chính mình.' });
     }
@@ -141,8 +135,6 @@ router.put('/:id', authenticateToken, authorizeRoles('Manager'), async (req, res
       user.roleId = roleId;
     }
     
-    // Always keep manager's school
-    user.school = manager.school;
     user.department = department || null;
     user.class = classVal || null;
 
@@ -157,8 +149,8 @@ router.put('/:id', authenticateToken, authorizeRoles('Manager'), async (req, res
   }
 });
 
-// 2.2 Change User Role (Manager)
-router.put('/:id/role', authenticateToken, authorizeRoles('Manager'), async (req, res) => {
+// 2.2 Change User Role (Admin only)
+router.put('/:id/role', authenticateToken, authorizeRoles('Admin'), async (req, res) => {
   try {
     const { roleId } = req.body;
     const user = await User.findByPk(req.params.id);
@@ -167,12 +159,12 @@ router.put('/:id/role', authenticateToken, authorizeRoles('Manager'), async (req
       return res.status(404).json({ message: 'Không tìm thấy người dùng này.' });
     }
 
-    const manager = await User.findByPk(req.user.id);
-    if (!manager || user.school !== manager.school) {
-      return res.status(403).json({ message: 'Bạn chỉ có thể thay đổi vai trò của người dùng trong trường của mình.' });
+    const admin = await User.findByPk(req.user.id);
+    if (!admin) {
+      return res.status(403).json({ message: 'Không xác định được thông tin quản trị viên.' });
     }
 
-    // Block Manager from changing their own role
+    // Block from changing their own role
     if (user.id === req.user.id && parseInt(roleId) !== user.roleId) {
       return res.status(400).json({ message: 'Bạn không thể tự thay đổi vai trò của chính mình.' });
     }
@@ -191,8 +183,8 @@ router.put('/:id/role', authenticateToken, authorizeRoles('Manager'), async (req
   }
 });
 
-// 2.3 Approve Pending Account (Manager)
-router.put('/:id/approve', authenticateToken, authorizeRoles('Manager'), async (req, res) => {
+// 2.3 Approve Pending Account (Admin & Manager)
+router.put('/:id/approve', authenticateToken, authorizeRoles(['Admin', 'Manager']), async (req, res) => {
   try {
     const user = await User.findByPk(req.params.id);
     if (!user) {
@@ -203,11 +195,9 @@ router.put('/:id/approve', authenticateToken, authorizeRoles('Manager'), async (
       return res.status(400).json({ message: 'Tài khoản này không ở trạng thái chờ phê duyệt.' });
     }
 
-    const manager = await User.findByPk(req.user.id);
-    if (!manager || (user.school && user.school !== manager.school)) {
-      return res.status(403).json({ message: 'Bạn chỉ có thể phê duyệt tài khoản trong trường của mình.' });
+    if (req.user.role === 'Manager' && user.roleId !== 6) {
+      return res.status(403).json({ message: 'Cán bộ quản lý chỉ có quyền phê duyệt tài khoản Nhà tuyển dụng.' });
     }
-
 
     user.status = 'Active';
     await user.save();
@@ -218,8 +208,8 @@ router.put('/:id/approve', authenticateToken, authorizeRoles('Manager'), async (
   }
 });
 
-// 3. Delete User (Manager)
-router.delete('/:id', authenticateToken, authorizeRoles('Manager'), async (req, res) => {
+// 3. Delete User (Admin only)
+router.delete('/:id', authenticateToken, authorizeRoles('Admin'), async (req, res) => {
   try {
     const user = await User.findByPk(req.params.id);
     if (!user) {
@@ -230,11 +220,10 @@ router.delete('/:id', authenticateToken, authorizeRoles('Manager'), async (req, 
       return res.status(400).json({ message: 'Bạn không thể tự xóa tài khoản của chính mình.' });
     }
 
-    const manager = await User.findByPk(req.user.id);
-    if (!manager || user.school !== manager.school) {
-      return res.status(403).json({ message: 'Bạn chỉ có thể xóa tài khoản trong trường của mình.' });
+    const admin = await User.findByPk(req.user.id);
+    if (!admin) {
+      return res.status(403).json({ message: 'Không xác định được thông tin quản trị viên.' });
     }
-
 
     await user.destroy();
     res.json({ message: 'Xóa tài khoản thành công!' });

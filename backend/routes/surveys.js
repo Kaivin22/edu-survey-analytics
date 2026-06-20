@@ -43,14 +43,9 @@ router.get('/', authenticateToken, async (req, res) => {
         whereClause.createdBy = userId;
       }
 
-      // Manager can only see surveys from their school
+      // Manager can see all surveys in single-school system
       if (userRole === 'Manager') {
-        const manager = await User.findByPk(userId);
-        if (manager && manager.school) {
-          whereClause.school = manager.school;
-        } else {
-          return res.json([]);
-        }
+        // No school filter needed
       }
 
       const surveys = await Survey.findAll({
@@ -107,10 +102,6 @@ router.get('/', authenticateToken, async (req, res) => {
       };
 
       if (user) {
-        // Filter: survey must match user's school or be null/empty
-        surveyWhere.school = {
-          [Op.or]: [null, '', user.school]
-        };
         // Filter: survey must match user's department or be null/empty
         surveyWhere.department = {
           [Op.or]: [null, '', user.department]
@@ -244,10 +235,10 @@ router.post('/', authenticateToken, authorizeRoles('Manager'), async (req, res) 
     let finalSchool = school || null;
     if (req.user.role === 'Manager') {
       const manager = await User.findByPk(req.user.id);
-      if (!manager || !manager.school) {
-        return res.status(403).json({ message: 'Không xác định được trường của bạn.' });
+      if (!manager) {
+        return res.status(403).json({ message: 'Người dùng không hợp lệ.' });
       }
-      finalSchool = manager.school;
+      finalSchool = manager.school || null;
     }
 
     const survey = await Survey.create({
@@ -310,10 +301,10 @@ router.put('/:id', authenticateToken, authorizeRoles('Manager'), async (req, res
     let finalSchool = school || null;
     if (req.user.role === 'Manager') {
       const manager = await User.findByPk(req.user.id);
-      if (!manager || !manager.school || survey.school !== manager.school) {
-        return res.status(403).json({ message: 'Bạn chỉ có thể chỉnh sửa khảo sát của trường mình.' });
+      if (!manager) {
+        return res.status(403).json({ message: 'Người dùng không hợp lệ.' });
       }
-      finalSchool = manager.school;
+      finalSchool = manager.school || null;
     }
 
     // Update main fields
@@ -379,8 +370,8 @@ router.delete('/:id', authenticateToken, authorizeRoles('Manager'), async (req, 
 
     if (req.user.role === 'Manager') {
       const manager = await User.findByPk(req.user.id);
-      if (!manager || !manager.school || survey.school !== manager.school) {
-        return res.status(403).json({ message: 'Bạn chỉ có thể xóa khảo sát của trường mình.' });
+      if (!manager) {
+        return res.status(403).json({ message: 'Người dùng không hợp lệ.' });
       }
     }
 
@@ -496,11 +487,11 @@ router.get('/:id/stats', authenticateToken, authorizeRoles('Manager'), async (re
       return res.status(404).json({ message: 'Không tìm thấy cuộc khảo sát.' });
     }
 
-    // Manager can only view stats for surveys in their school
+    // Manager can only view stats for surveys
     if (req.user.role === 'Manager') {
       const manager = await User.findByPk(req.user.id);
-      if (manager && manager.school && survey.school && survey.school !== manager.school) {
-        return res.status(403).json({ message: 'Bạn chỉ có thể xem thống kê khảo sát trong trường của mình.' });
+      if (!manager) {
+        return res.status(403).json({ message: 'Người dùng không hợp lệ.' });
       }
     }
 
@@ -543,9 +534,6 @@ router.get('/:id/stats', authenticateToken, authorizeRoles('Manager'), async (re
     }
 
     // Apply survey school/department/class filters based on targetAudience compatibility
-    if (survey.school) {
-      assignedWhere.school = survey.school;
-    }
     const canHaveDept = ['Student', 'Lecturer', 'Alumnus', 'All'].includes(survey.targetAudience);
     if (survey.department && canHaveDept) {
       assignedWhere.department = survey.department;
@@ -691,10 +679,7 @@ router.get('/:id/participants', authenticateToken, authorizeRoles('Manager'), as
       whereClause.roleId = { [Op.notIn]: excludedIds };
     }
 
-    // Filter by school
-    if (survey.school) {
-      whereClause.school = survey.school;
-    }
+    // Filter by school - disabled for single-school system
 
     // Filter by department - Only apply to Student, Lecturer, Alumnus, All
     const canHaveDept = ['Student', 'Lecturer', 'Alumnus', 'All'].includes(survey.targetAudience);
