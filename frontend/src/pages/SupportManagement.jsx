@@ -217,13 +217,28 @@ function SupportManagement({ user, onLogout }) {
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <h4 className="font-extrabold text-sm text-[#2d4771]">{u.fullName || 'Người dùng ẩn danh'}</h4>
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-slate-100 text-slate-600">
-                            {roleLabel}
+                          <h4 className="font-extrabold text-sm text-[#2d4771]">
+                            {t.userId ? (u.fullName || 'Người dùng ẩn danh') : t.guestName}
+                          </h4>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg text-xs" style={
+                            t.userId ? { background: '#f1f5f9', color: '#475569' } : { background: '#FFF7ED', color: '#EA580C', border: '1px solid #FFEDD5' }
+                          }>
+                            {t.userId ? roleLabel : 'Khách (Chưa đăng nhập)'}
                           </span>
                         </div>
                         <p className="text-[10px] text-slate-400 font-semibold mt-0.5">
-                          {u.code ? `Mã: ${u.code}` : ''} {u.class ? `• Lớp: ${u.class}` : ''} {u.department ? `• Khoa: ${u.department}` : ''}
+                          {t.userId ? (
+                            <>
+                              {u.code ? `Mã: ${u.code} ` : ''}
+                              {u.class ? `• Lớp: ${u.class} ` : ''}
+                              {u.department ? `• Khoa: ${u.department} ` : ''}
+                              {u.email ? `• Email: ${u.email}` : ''}
+                            </>
+                          ) : (
+                            <>
+                              Email liên hệ: <span className="font-mono text-[#6E9AE0]">{t.guestEmail}</span>
+                            </>
+                          )}
                         </p>
                       </div>
                     </div>

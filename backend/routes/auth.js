@@ -550,47 +550,4 @@ router.post('/google-register', async (req, res) => {
   }
 });
 
-// 10. Contact Form - Send real email to admin
-router.post('/contact', async (req, res) => {
-  try {
-    const { name, email, subject, message } = req.body;
-    if (!name || !email || !message) {
-      return res.status(400).json({ message: 'Vui lòng cung cấp đầy đủ họ tên, email và nội dung tin nhắn.' });
-    }
-
-    const adminEmail = process.env.ADMIN_EMAIL || 'trankimlien31072004@gmail.com';
-
-    const mailOptions = {
-      from: process.env.SMTP_FROM || '"ĐBCL - Đại học Kiến trúc Đà Nẵng" <your-email@gmail.com>',
-      to: adminEmail,
-      subject: `[Liên hệ] ${subject || 'Tin nhắn mới từ ' + name}`,
-      html: `
-        <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 25px; border: 1px solid #D2DBEA; border-radius: 16px; background-color: #F9FAFD;">
-          <h2 style="color: #6E9AE0; margin-top: 0; text-align: center;">ĐBCL - Đại học Kiến trúc Đà Nẵng - Tin nhắn Liên hệ</h2>
-          <hr style="border: 0; border-top: 1px solid #D2DBEA; margin: 20px 0;">
-          <p><strong>Họ tên:</strong> ${name}</p>
-          <p><strong>Email:</strong> ${email}</p>
-          <p><strong>Chủ đề:</strong> ${subject || 'Không có chủ đề'}</p>
-          <hr style="border: 0; border-top: 1px solid #D2DBEA; margin: 20px 0;">
-          <p><strong>Nội dung:</strong></p>
-          <div style="background-color: #EEF4FD; padding: 15px; border-radius: 8px; margin: 10px 0;">
-            <p style="white-space: pre-wrap; color: #2d4771;">${message}</p>
-          </div>
-          <hr style="border: 0; border-top: 1px solid #D2DBEA; margin: 20px 0;">
-          <p style="font-size: 12px; color: #A0AEC0; text-align: center;">Email này được gửi tự động từ hệ thống ĐBCL - Đại học Kiến trúc Đà Nẵng © ${new Date().getFullYear()}</p>
-        </div>
-      `
-    };
-
-    await transporter.sendMail(mailOptions);
-    res.json({ message: 'Tin nhắn của bạn đã được gửi thành công! Chúng tôi sẽ phản hồi sớm nhất có thể.' });
-  } catch (error) {
-    console.error('Lỗi gửi email liên hệ:', error);
-    res.status(500).json({
-      message: 'Gửi tin nhắn thất bại. Vui lòng thử lại sau hoặc liên hệ trực tiếp qua email.',
-      error: error.message
-    });
-  }
-});
-
 module.exports = router;

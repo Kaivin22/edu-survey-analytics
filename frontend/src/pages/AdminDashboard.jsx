@@ -5,7 +5,7 @@ import { LogOut, ClipboardList, Users, BarChart3, Plus, Trash2, Edit, FileSpread
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const TARGET_LABELS = { Student: 'Sinh viên', Lecturer: 'Giảng viên', Alumnus: 'Cựu sinh viên', Employer: 'Nhà tuyển dụng', All: 'Tất cả' };
-const ROLE_LABELS = { Manager: 'Cán bộ quản lý', Student: 'Sinh viên', Lecturer: 'Giảng viên', Alumnus: 'Cựu sinh viên', Employer: 'Nhà tuyển dụng' };
+const ROLE_LABELS = { Admin: 'Cán bộ quản lý', Manager: 'Cán bộ quản lý', Student: 'Sinh viên', Lecturer: 'Giảng viên', Alumnus: 'Cựu sinh viên', Employer: 'Nhà tuyển dụng' };
 
 const SCHOOLS = [];
 const DEPARTMENTS = {};
@@ -248,7 +248,7 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
       password: '',
       fullName: '',
       code: '',
-      roleId: roles.length > 0 ? roles.filter(r => !(r.name === 'Manager' || r.id === 2))[0]?.id : '',
+      roleId: roles.length > 0 ? (roles.find(r => r.name === 'Student')?.id || roles.filter(r => !(r.name === 'Admin' || r.id === 1))[0]?.id) : '',
       school: user.school,
       department: '',
       class: ''
@@ -598,12 +598,12 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
                           <select
                             value={acc.roleId}
                             onChange={e => changeRole(acc.id, e.target.value)}
-                            disabled={acc.id === user.id || (user.role === 'Manager' && (acc.role?.name === 'Admin' || acc.role?.name === 'Manager' || acc.roleId === 1 || acc.roleId === 2))}
+                            disabled={acc.id === user.id}
                             className="rounded-xl px-2 py-1 text-xs font-bold outline-none border disabled:opacity-40"
                             style={{ background: '#EEF4FD', borderColor: '#D2DBEA', color: '#2d4771' }}
                           >
                             {roles
-                              .filter(r => !(r.id === 2 || r.name === 'Manager'))
+                              .filter(r => !(r.id === 1 || r.name === 'Admin'))
                               .map(r => <option key={r.id} value={r.id}>{ROLE_LABELS[r.name] || r.name}</option>)
                             }
                           </select>
@@ -638,7 +638,7 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
                             )}
                             <button
                               onClick={() => openEditModal(acc)}
-                              disabled={acc.roleId === 2 || acc.role?.name === 'Manager'}
+                              disabled={acc.id === user.id}
                               className="p-2 rounded-xl transition-all disabled:opacity-30"
                               style={{ background: '#FFFBEB', color: '#D97706' }}
                               title="Chỉnh sửa"
@@ -647,7 +647,7 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
                             </button>
                             <button
                               onClick={() => deleteUser(acc.id)}
-                              disabled={acc.id === user.id || acc.roleId === 2 || acc.role?.name === 'Manager'}
+                              disabled={acc.id === user.id}
                               className="p-2 rounded-xl transition-all disabled:opacity-30"
                               style={{ background: '#FFF5F5', color: '#dc2626' }}
                               title="Xóa"
@@ -969,7 +969,7 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
                   >
                     <option value="">Chọn vai trò...</option>
                     {roles
-                      .filter(r => !(r.id === 1 || r.id === 2 || r.name === 'Admin' || r.name === 'Manager'))
+                      .filter(r => !(r.id === 1 || r.name === 'Admin'))
                       .map(r => <option key={r.id} value={r.id}>{ROLE_LABELS[r.name] || r.name}</option>)
                     }
                   </select>
