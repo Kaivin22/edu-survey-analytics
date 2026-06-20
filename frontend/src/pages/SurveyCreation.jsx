@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Plus, Trash2, CheckCircle2, AlertCircle, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Save, Plus, Trash2, CheckCircle2, AlertCircle, ChevronRight, X, HelpCircle, BookOpen } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-const SCHOOLS = [];
-const DEPARTMENTS = {};
-const CLASSES = {};
+const TARGET_LABELS = { Student: 'Sinh viên', Lecturer: 'Giảng viên', Alumnus: 'Cựu sinh viên', Employer: 'Nhà tuyển dụng', All: 'Tất cả' };
 
 const inputBase = {
   background: '#F9FAFD',
@@ -47,6 +45,12 @@ function SurveyCreation({ isEdit = false, user }) {
   const [dynamicDepartments, setDynamicDepartments] = useState({});
   const [dynamicClasses, setDynamicClasses] = useState({});
 
+  // Templates and Question Bank States
+  const [templates, setTemplates] = useState([]);
+  const [showBankModal, setShowBankModal] = useState(false);
+  const [bankQuestions, setBankQuestions] = useState([]);
+  const [selectedBankIdxs, setSelectedBankIdxs] = useState([]);
+
   useEffect(() => {
     const fetchCategories = async () => {
       try {
@@ -75,6 +79,21 @@ function SurveyCreation({ isEdit = false, user }) {
     fetchCategories();
   }, []);
 
+  useEffect(() => {
+    const fetchTemplates = async () => {
+      try {
+        const res = await fetch(`${API_URL}/surveys/templates`, { headers: { Authorization: `Bearer ${token}` } });
+        if (res.ok) {
+          const data = await res.json();
+          setTemplates(data);
+        }
+      } catch (e) {
+        console.error('Error fetching templates:', e);
+      }
+    };
+    fetchTemplates();
+  }, []);
+
   useEffect(() => { if (isEdit && id) loadSurvey(); }, [id, isEdit]);
 
   const loadSurvey = async () => {
@@ -98,7 +117,7 @@ function SurveyCreation({ isEdit = false, user }) {
     } catch (e) { setError(e.message); } finally { setLoading(false); }
   };
 
-  const addQuestion = () => setQuestions(prev => [...prev, { text: '', type: 'likert_scale', required: true, order: prev.length, options: [{ text: 'Lựa chọn 1', order: 0 }, { text: 'Lựa chọn 2', order: 1 }] }]);
+  const addQuestion = () => setQuestions(prev => [...prev, { text: '', type: 'likert_scale', required: true, category: 'Khác', order: prev.length, options: [{ text: 'Lựa chọn 1', order: 0 }, { text: 'Lựa chọn 2', order: 1 }] }]);
 
   const removeQuestion = (i) => setQuestions(prev => prev.filter((_, idx) => idx !== i).map((q, idx) => ({ ...q, order: idx })));
 
@@ -109,6 +128,80 @@ function SurveyCreation({ isEdit = false, user }) {
   const removeOption = (qi, oi) => setQuestions(prev => prev.map((q, idx) => idx === qi ? { ...q, options: q.options.filter((_, i) => i !== oi).map((o, i) => ({ ...o, order: i })) } : q));
 
   const updateOption = (qi, oi, text) => setQuestions(prev => prev.map((q, idx) => idx === qi ? { ...q, options: q.options.map((o, i) => i === oi ? { ...o, text } : o) } : q));
+
+  const handleSelectTemplate = (templateId) => {
+    const t = templates.find(temp => temp.id === templateId);
+    if (!t) return;
+    if (confirm(`Áp dụng biểu mẫu mẫu "${t.title}" sẽ ghi đè tiêu đề, mô tả và các câu hỏi hiện tại. Bạn có đồng ý?`)) {
+      setForm(f => ({
+        ...f,
+        title: t.title,
+        description: t.description,
+        targetAudience: t.targetAudience
+      }));
+      setQuestions(t.questions.map((q, idx) => ({
+        text: q.text,
+        type: q.type,
+        required: q.required,
+        category: q.category || 'Khác',
+        order: idx,
+        options: q.type === 'likert_scale' ? [] : [
+          { text: 'Lựa chọn 1', order: 0 },
+          { text: 'Lựa chọn 2', order: 1 }
+        ]
+      })));
+    }
+  };
+
+  const openBankModal = async () => {
+    try {
+      const res = await fetch(`${API_URL}/surveys/question-bank?targetAudience=${form.targetAudience}`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) {
+        const data = await res.json();
+        setBankQuestions(data);
+        setSelectedBankIdxs([]);
+        setShowBankModal(true);
+        setError('');
+      } else {
+        alert('Không thể tải ngân hàng câu hỏi.');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Lỗi kết nối khi tải ngân hàng câu hỏi.');
+    }
+  };
+
+  const toggleBankSelection = (idx) => {
+    setSelectedBankIdxs(prev =>
+      prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]
+    );
+  };
+
+  const handleImportQuestions = () => {
+    const selected = selectedBankIdxs.map(idx => bankQuestions[idx]);
+    if (selected.length === 0) {
+      setShowBankModal(false);
+      return;
+    }
+
+    setQuestions(prev => {
+      const startOrder = prev.length;
+      const imported = selected.map((q, idx) => ({
+        text: q.text,
+        type: q.type,
+        required: true,
+        category: q.category || 'Khác',
+        order: startOrder + idx,
+        options: q.type === 'likert_scale' ? [] : [
+          { text: 'Lựa chọn 1', order: 0 },
+          { text: 'Lựa chọn 2', order: 1 }
+        ]
+      }));
+      return [...prev, ...imported];
+    });
+
+    setShowBankModal(false);
+  };
 
   const handleSave = async (e) => {
     if (e) e.preventDefault();
@@ -186,6 +279,32 @@ function SurveyCreation({ isEdit = false, user }) {
             <ChevronRight size={18} style={{ color: '#6E9AE0' }} />1. Thông tin chung cuộc khảo sát
           </h3>
           <div className="space-y-4">
+            
+            {/* Template selector */}
+            {!isEdit && templates.length > 0 && (
+              <div className="p-4 rounded-2xl mb-4 border border-dashed flex flex-col sm:flex-row sm:items-center justify-between gap-4" style={{ background: '#EEF4FD', borderColor: '#6E9AE0' }}>
+                <div>
+                  <h4 className="text-xs font-black flex items-center gap-1.5" style={{ color: '#2d4771' }}>
+                    <BookOpen size={14} style={{ color: '#6E9AE0' }} /> Sử dụng Biểu mẫu Khảo sát Chuẩn
+                  </h4>
+                  <p className="text-xs text-slate-500 mt-0.5">Tiết kiệm thời gian bằng cách áp dụng biểu mẫu kiểm định chất lượng có sẵn</p>
+                </div>
+                <div>
+                  <select 
+                    onChange={e => handleSelectTemplate(e.target.value)} 
+                    className="px-3 py-2 rounded-xl border text-xs font-bold outline-none" 
+                    style={{ ...selectStyle, background: '#fff', minWidth: '220px' }}
+                    defaultValue=""
+                  >
+                    <option value="" disabled>--- Chọn biểu mẫu mẫu ---</option>
+                    {templates.map(t => (
+                      <option key={t.id} value={t.id}>{t.title} ({TARGET_LABELS[t.targetAudience] || t.targetAudience})</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+
             <div>
               <label className="block text-sm font-semibold mb-1 ml-1" style={{ color: '#2d4771' }}>Tiêu đề *</label>
               <input type="text" placeholder="Nhập tiêu đề cuộc khảo sát..." value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
@@ -289,34 +408,39 @@ function SurveyCreation({ isEdit = false, user }) {
 
         {/* Part 2: Questions */}
         <div className="space-y-5">
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
             <h3 className="text-base font-extrabold flex items-center gap-2" style={{ color: '#2d4771' }}>
               <ChevronRight size={18} style={{ color: '#6E9AE0' }} />2. Nội dung câu hỏi ({questions.length})
             </h3>
-            <button onClick={addQuestion} className="px-4 py-2 text-xs font-bold rounded-2xl border flex items-center gap-1.5 transition-all" style={{ background: '#EEF4FD', borderColor: '#D2DBEA', color: '#6E9AE0' }}>
-              <Plus size={14} />Thêm câu hỏi
-            </button>
+            <div className="flex gap-2">
+              <button onClick={openBankModal} className="px-4 py-2 text-xs font-bold rounded-2xl border flex items-center gap-1.5 transition-all bg-white hover:bg-slate-50" style={{ borderColor: '#D2DBEA', color: '#2d4771' }}>
+                <HelpCircle size={14} style={{ color: '#A0AEC0' }} />Chọn từ Ngân hàng câu hỏi
+              </button>
+              <button onClick={addQuestion} className="px-4 py-2 text-xs font-bold rounded-2xl border flex items-center gap-1.5 transition-all" style={{ background: '#EEF4FD', borderColor: '#D2DBEA', color: '#6E9AE0' }}>
+                <Plus size={14} />Thêm câu hỏi
+              </button>
+            </div>
           </div>
 
           {questions.length === 0 ? (
             <div className="p-10 rounded-2xl text-center border-2 border-dashed" style={{ borderColor: '#D2DBEA' }}>
-              <p className="text-sm" style={{ color: '#A0AEC0' }}>Chưa có câu hỏi. Hãy nhấn "Thêm câu hỏi" ở trên.</p>
+              <p className="text-sm" style={{ color: '#A0AEC0' }}>Chưa có câu hỏi. Hãy tạo câu hỏi mới hoặc sử dụng ngân hàng câu hỏi.</p>
             </div>
           ) : questions.map((q, qi) => (
-            <div key={qi} className="rounded-2xl p-6 border shadow-sm relative" style={{ background: '#fff', borderColor: '#D2DBEA' }}>
-              <button onClick={() => removeQuestion(qi)} className="absolute top-4 right-4 p-1.5 rounded-xl transition-all" style={{ background: '#FFF5F5', color: '#dc2626' }}>
+            <div key={qi} className="rounded-2xl p-6 border shadow-sm relative animate-fade-in" style={{ background: '#fff', borderColor: '#D2DBEA' }}>
+              <button onClick={() => removeQuestion(qi)} className="absolute top-4 right-4 p-1.5 rounded-xl transition-all hover:opacity-85" style={{ background: '#FFF5F5', color: '#dc2626' }}>
                 <Trash2 size={15} />
               </button>
               <span className="text-xs font-bold px-2 py-0.5 rounded-lg mb-4 inline-block" style={{ background: '#EEF4FD', color: '#6E9AE0' }}>Câu hỏi {qi + 1}</span>
 
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-                <div className="md:col-span-2">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 mb-4">
+                <div className="md:col-span-5">
                   <label className="block text-xs font-bold mb-1" style={{ color: '#2d4771' }}>Nội dung câu hỏi *</label>
                   <input type="text" placeholder="Nhập câu hỏi..." value={q.text} onChange={e => updateQ(qi, 'text', e.target.value)}
                     className="w-full px-3 py-2 rounded-xl border text-sm font-medium outline-none" style={inputBase}
                     onFocus={e => e.target.style.borderColor = '#6E9AE0'} onBlur={e => e.target.style.borderColor = '#D2DBEA'} />
                 </div>
-                <div>
+                <div className="md:col-span-2">
                   <label className="block text-xs font-bold mb-1" style={{ color: '#2d4771' }}>Loại câu hỏi</label>
                   <select value={q.type} onChange={e => updateQ(qi, 'type', e.target.value)}
                     className="w-full px-3 py-2 rounded-xl border text-xs font-bold outline-none" style={selectStyle}>
@@ -326,10 +450,21 @@ function SurveyCreation({ isEdit = false, user }) {
                     <option value="open_text">Tự luận / Ý kiến mở</option>
                   </select>
                 </div>
-                <div className="flex items-end pb-1">
+                <div className="md:col-span-3">
+                  <label className="block text-xs font-bold mb-1" style={{ color: '#2d4771' }}>Tiêu chí kiểm định</label>
+                  <select value={q.category || 'Khác'} onChange={e => updateQ(qi, 'category', e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border text-xs font-bold outline-none" style={selectStyle}>
+                    <option value="Cơ sở vật chất">Cơ sở vật chất</option>
+                    <option value="Chương trình đào tạo">Chương trình đào tạo</option>
+                    <option value="Phương pháp giảng dạy">Phương pháp giảng dạy</option>
+                    <option value="Dịch vụ hỗ trợ">Dịch vụ hỗ trợ</option>
+                    <option value="Khác">Khác</option>
+                  </select>
+                </div>
+                <div className="md:col-span-2 flex items-end pb-2">
                   <label className="flex items-center gap-2 cursor-pointer text-xs font-bold" style={{ color: '#2d4771' }}>
                     <input type="checkbox" checked={q.required} onChange={e => updateQ(qi, 'required', e.target.checked)} className="w-4 h-4 rounded" style={{ accentColor: '#6E9AE0' }} />
-                    Bắt buộc trả lời
+                    Bắt buộc
                   </label>
                 </div>
               </div>
@@ -365,6 +500,81 @@ function SurveyCreation({ isEdit = false, user }) {
           <button onClick={handleSave} disabled={loading} className="px-6 py-2.5 text-white font-bold rounded-2xl shadow-md transition-all disabled:opacity-50 text-sm" style={{ background: 'linear-gradient(135deg, #6E9AE0, #487bc9)' }}>Lưu khảo sát</button>
         </div>
       </main>
+
+      {/* ─── Question Bank Modal ─── */}
+      {showBankModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-2xl bg-white border border-slate-200 shadow-2xl rounded-3xl overflow-hidden flex flex-col max-h-[85vh]">
+            
+            {/* Modal Header */}
+            <div className="p-5 flex justify-between items-center border-b border-slate-100" style={{ background: 'linear-gradient(135deg, #EEF4FD, #E2EDFC)' }}>
+              <div>
+                <h3 className="font-extrabold text-slate-800 flex items-center gap-2">
+                  <HelpCircle className="text-blue-500" size={20} /> Ngân hàng câu hỏi chuẩn
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">Đối tượng: {TARGET_LABELS[form.targetAudience] || form.targetAudience}</p>
+              </div>
+              <button onClick={() => setShowBankModal(false)} className="p-2 text-slate-400 hover:text-slate-600 bg-white shadow-sm rounded-xl transition-all">
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto space-y-3.5 flex-1 bg-slate-50/50">
+              {bankQuestions.length === 0 ? (
+                <div className="text-center py-10 text-slate-400 text-sm">
+                  Không tìm thấy câu hỏi chuẩn nào cho đối tượng này.
+                </div>
+              ) : (
+                bankQuestions.map((bq, idx) => (
+                  <label 
+                    key={idx} 
+                    className="flex items-start gap-3.5 p-4 bg-white border border-slate-200 rounded-2xl cursor-pointer hover:border-blue-300 transition-all select-none shadow-sm block"
+                  >
+                    <input 
+                      type="checkbox" 
+                      checked={selectedBankIdxs.includes(idx)} 
+                      onChange={() => toggleBankSelection(idx)}
+                      className="w-4 h-4 mt-1 rounded text-blue-500" 
+                      style={{ accentColor: '#6E9AE0' }}
+                    />
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-slate-800 leading-snug">{bq.text}</p>
+                      <div className="flex gap-2 mt-2">
+                        <span className="text-[10px] font-bold px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md uppercase">
+                          {bq.type === 'likert_scale' ? 'Likert 5 mức' : bq.type}
+                        </span>
+                        <span className="text-[10px] font-bold px-2 py-0.5 bg-blue-50 text-blue-600 rounded-md uppercase">
+                          {bq.category}
+                        </span>
+                      </div>
+                    </div>
+                  </label>
+                ))
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-slate-100 flex justify-end gap-3 bg-white">
+              <button 
+                onClick={() => setShowBankModal(false)} 
+                className="px-5 py-2 text-xs font-bold border border-slate-200 rounded-xl hover:bg-slate-50 transition-all"
+              >
+                Hủy bỏ
+              </button>
+              <button 
+                onClick={handleImportQuestions}
+                disabled={selectedBankIdxs.length === 0}
+                className="px-5 py-2 text-xs font-bold text-white rounded-xl shadow-sm transition-all disabled:opacity-50"
+                style={{ background: 'linear-gradient(135deg, #6E9AE0, #487bc9)' }}
+              >
+                Nhập {selectedBankIdxs.length} câu hỏi
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -5,7 +5,7 @@ import { LogOut, ClipboardList, Users, BarChart3, Plus, Trash2, Edit, FileSpread
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const TARGET_LABELS = { Student: 'Sinh viên', Lecturer: 'Giảng viên', Alumnus: 'Cựu sinh viên', Employer: 'Nhà tuyển dụng', All: 'Tất cả' };
-const ROLE_LABELS = { Admin: 'Quản trị viên', Manager: 'Cán bộ quản lý', Student: 'Sinh viên', Lecturer: 'Giảng viên', Alumnus: 'Cựu sinh viên', Employer: 'Nhà tuyển dụng' };
+const ROLE_LABELS = { Manager: 'Cán bộ quản lý', Student: 'Sinh viên', Lecturer: 'Giảng viên', Alumnus: 'Cựu sinh viên', Employer: 'Nhà tuyển dụng' };
 
 const SCHOOLS = [];
 const DEPARTMENTS = {};
@@ -20,7 +20,7 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
   const [stats, setStats] = useState({ total: 0, active: 0, users: 0 });
   const [userFilters, setUserFilters] = useState({ 
     role: '', 
-    school: user.role === 'Manager' ? user.school : '', 
+    school: user.school, 
     department: '', 
     class: '' 
   });
@@ -108,7 +108,7 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
   useEffect(() => {
     fetchSurveys();
     fetchCategoriesTree();
-    if (['Admin', 'Manager'].includes(user.role)) {
+    if (user.role === 'Manager') {
       fetchAccounts();
       fetchRoles();
     }
@@ -248,8 +248,8 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
       password: '',
       fullName: '',
       code: '',
-      roleId: roles.length > 0 ? roles.filter(r => !(user.role === 'Manager' && (r.name === 'Admin' || r.name === 'Manager' || r.id === 1 || r.id === 2)))[0]?.id : '',
-      school: user.role === 'Manager' ? user.school : '',
+      roleId: roles.length > 0 ? roles.filter(r => !(r.name === 'Manager' || r.id === 2))[0]?.id : '',
+      school: user.school,
       department: '',
       class: ''
     });
@@ -267,7 +267,7 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
       fullName: acc.fullName || '',
       code: acc.code || '',
       roleId: acc.roleId || '',
-      school: user.role === 'Manager' ? user.school : (acc.school || ''),
+      school: user.school,
       department: acc.department || '',
       class: acc.class || ''
     });
@@ -369,7 +369,7 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
             <div>
               <Link to="/" style={{ textDecoration: 'none' }} className="text-lg font-extrabold text-white tracking-tight">Academic Synergy</Link>
               <span className="ml-2 text-xs bg-white/20 text-white px-2 py-0.5 rounded-lg font-bold">
-                {user.role === 'Admin' ? 'Admin Panel' : 'Manager Panel'}
+                {false ? 'Admin Panel' : 'Manager Panel'}
               </span>
             </div>
           </div>
@@ -388,20 +388,27 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
           <StatCard icon={ClipboardList} label="Tổng số khảo sát" value={stats.total} bg="#EEF4FD" iconColor="#6E9AE0" />
           <StatCard icon={CheckCircle} label="Khảo sát đang chạy" value={stats.active} bg="#F0FDF4" iconColor="#16a34a" />
-          <StatCard icon={Users} label="Tổng số tài khoản" value={['Admin', 'Manager'].includes(user.role) ? stats.users : '—'} bg="#FFFBEB" iconColor="#D97706" />
+          <StatCard icon={Users} label="Tổng số tài khoản" value={user.role === 'Manager' ? stats.users : '—'} bg="#FFFBEB" iconColor="#D97706" />
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-3" style={{ borderBottom: '2px solid #D2DBEA', paddingBottom: '1px' }}>
+        <div className="flex gap-3 flex-wrap" style={{ borderBottom: '2px solid #D2DBEA', paddingBottom: '1px' }}>
           {[
             { key: 'surveys', icon: ClipboardList, label: 'Quản lý phiếu khảo sát' },
-            ...(['Admin', 'Manager'].includes(user.role) ? [{ key: 'accounts', icon: Users, label: 'Quản lý phân quyền tài khoản' }] : []),
+            ...(user.role === 'Manager' ? [{ key: 'accounts', icon: Users, label: 'Quản lý phân quyền tài khoản' }] : []),
             { key: 'categories', icon: School, label: 'Quản lý danh mục (Trường, Khoa, Lớp)' },
+            { key: 'tickets', icon: HelpCircle, label: 'Quản lý hỗ trợ & báo lỗi' },
             { key: 'profile', icon: User, label: 'Thông tin cá nhân' },
           ].map(({ key, icon: Icon, label }) => (
             <button
               key={key}
-              onClick={() => setActiveTab(key)}
+              onClick={() => {
+                if (key === 'tickets') {
+                  navigate('/support-tickets');
+                } else {
+                  setActiveTab(key);
+                }
+              }}
               className="px-5 py-2.5 rounded-t-xl font-bold text-sm transition-all flex items-center gap-2"
               style={activeTab === key
                 ? { background: '#6E9AE0', color: '#fff', marginBottom: '-2px', borderBottom: '2px solid #6E9AE0' }
@@ -421,7 +428,7 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
                 <h2 className="text-xl font-extrabold" style={{ color: '#2d4771' }}>Danh sách Cuộc Khảo Sát</h2>
                 <p className="text-xs mt-0.5" style={{ color: '#6E9AE0' }}>Nhấn biểu tượng mắt để xem thống kê phân tích và tải xuống báo cáo Excel</p>
               </div>
-              {['Admin', 'Manager'].includes(user.role) && (
+              {user.role === 'Manager' && (
                 <button
                   onClick={() => navigate('/survey/create')}
                   className="px-5 py-2.5 text-white font-bold rounded-2xl shadow-md transition-all text-sm flex items-center gap-2"
@@ -479,7 +486,7 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
                               <button onClick={() => navigate(`/survey/${s.id}/stats`)} title="Xem thống kê" className="p-2 rounded-xl transition-all" style={{ background: '#EEF4FD', color: '#6E9AE0' }}>
                                 <Eye size={15} />
                               </button>
-                              {(user.role === 'Admin' || (user.role === 'Manager' && s.school === user.school)) && (
+                              {(s.school === user.school) && (
                                 <>
                                   <button onClick={() => navigate(`/survey/edit/${s.id}`)} title="Chỉnh sửa" className="p-2 rounded-xl transition-all" style={{ background: '#FFFBEB', color: '#D97706' }}>
                                     <Edit size={15} />
@@ -502,7 +509,7 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
         )}
 
         {/* ── Tab: Accounts (Admin & Manager) ── */}
-        {activeTab === 'accounts' && ['Admin', 'Manager'].includes(user.role) && (
+        {activeTab === 'accounts' && user.role === 'Manager' && (
           <div className="space-y-5">
             <div className="flex justify-between items-center">
               <div>
@@ -851,7 +858,7 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
                 <div className="bg-white rounded-3xl border shadow-2xl max-w-sm w-full p-6 space-y-4" style={{ borderColor: '#D2DBEA' }}>
                   <div className="flex justify-between items-center pb-3 border-b border-slate-100">
                     <h3 className="font-extrabold text-lg" style={{ color: '#2d4771' }}>
-                      {categoryModal.mode === 'create' ? 'Thêm' : 'Sửa'} {categoryModal.type === 'school' ? 'Trường' : categoryModal.type === 'department' ? 'Khoa' : 'Lớp'}
+                      {categoryModal.mode === 'create' ? 'Thêm' : 'Sửa'} {categoryModal.type === 'department' ? 'Khoa' : 'Lớp'}
                     </h3>
                     <button onClick={closeCategoryModal} className="text-slate-400 hover:text-slate-600 font-bold">✕</button>
                   </div>
@@ -863,7 +870,7 @@ function AdminDashboard({ user, onLogout, onUpdateUser }) {
                         type="text"
                         required
                         autoFocus
-                        placeholder={categoryModal.type === 'school' ? 'Ví dụ: Kiến trúc Đà Nẵng (DAU)' : categoryModal.type === 'department' ? 'Ví dụ: Công nghệ thông tin' : 'Ví dụ: 22CT1'}
+                        placeholder={categoryModal.type === 'department' ? 'Ví dụ: Công nghệ thông tin' : 'Ví dụ: 22CT1'}
                         value={categoryModal.name}
                         onChange={e => setCategoryModal(prev => ({ ...prev, name: e.target.value }))}
                         className="w-full px-4 py-2.5 rounded-2xl border text-sm font-medium outline-none"

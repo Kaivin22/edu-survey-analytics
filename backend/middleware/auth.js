@@ -31,7 +31,7 @@ const authorizeRoles = (rolesParam) => {
       return res.status(403).json({ message: 'Bạn không có quyền truy cập chức năng này.' });
     }
 
-    const hasPermission = allowedRoles.includes(req.user.role) || req.user.role === 'Admin';
+    const hasPermission = allowedRoles.includes(req.user.role);
     
     if (!hasPermission) {
       return res.status(403).json({ message: 'Quyền truy cập bị từ chối cho vai trò của bạn.' });

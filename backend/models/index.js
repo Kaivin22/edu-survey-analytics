@@ -127,6 +127,10 @@ const Question = sequelize.define('Question', {
   order: {
     type: DataTypes.INTEGER,
     defaultValue: 0
+  },
+  category: {
+    type: DataTypes.STRING,
+    allowNull: true // e.g., 'Cơ sở vật chất', 'Chương trình đào tạo', 'Phương pháp giảng dạy', 'Dịch vụ hỗ trợ'
   }
 }, { timestamps: false });
 
@@ -284,6 +288,36 @@ Department.belongsTo(School, { foreignKey: 'schoolId', as: 'school' });
 Department.hasMany(Classroom, { foreignKey: 'departmentId', onDelete: 'CASCADE', as: 'classrooms' });
 Classroom.belongsTo(Department, { foreignKey: 'departmentId', as: 'department' });
 
+// 12. SupportTicket Model
+const SupportTicket = sequelize.define('SupportTicket', {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
+  },
+  subject: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  message: {
+    type: DataTypes.TEXT,
+    allowNull: false
+  },
+  status: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    defaultValue: 'Pending' // 'Pending', 'Processing', 'Resolved'
+  },
+  reply: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  }
+});
+
+// User <-> SupportTicket
+User.hasMany(SupportTicket, { foreignKey: 'userId', onDelete: 'CASCADE' });
+SupportTicket.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+
 module.exports = {
   sequelize,
   Role,
@@ -296,5 +330,6 @@ module.exports = {
   Notification,
   School,
   Department,
-  Classroom
+  Classroom,
+  SupportTicket
 };

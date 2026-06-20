@@ -8,6 +8,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import SurveyTaking from './pages/SurveyTaking';
 import SurveyStats from './pages/SurveyStats';
 import SurveyCreation from './pages/SurveyCreation';
+import SupportManagement from './pages/SupportManagement';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -99,6 +100,18 @@ function App() {
           element={
             user && ['Admin', 'Manager'].includes(user.role) ? (
               <SurveyStats user={user} onLogout={logout} />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+
+        {/* ── Support tickets (Admin/Manager) ── */}
+        <Route
+          path="/support-tickets"
+          element={
+            user && ['Admin', 'Manager'].includes(user.role) ? (
+              <SupportManagement user={user} onLogout={logout} />
             ) : (
               <Navigate to="/login" replace />
             )
