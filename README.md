@@ -89,7 +89,8 @@ Khi cơ sở dữ liệu được khởi tạo, hệ thống sẽ tự động t
 
 | Vai trò | Email đăng nhập | Tên người dùng | Mục đích thử nghiệm |
 | :--- | :--- | :--- | :--- |
-| **Cán bộ quản lý** | trankimlien31072004@gmail.com | Cán bộ Quản lý ĐBCL | Quản lý người dùng, phân phối khảo sát, xem thống kê & DSS, trả lời hỗ trợ |
+| **Quản trị viên (Admin)** | trankimlien31072004@gmail.com | Quản trị viên Hệ thống | Quản lý người dùng, phê duyệt tài khoản, quản lý danh mục, xử lý ticket lỗi |
+| **Cán bộ quản lý (Manager)** | manager@edu.vn | Cán bộ Quản lý ĐBCL | Tạo và phân phối khảo sát, thống kê kết quả khảo sát & hỗ trợ ra quyết định (DSS) |
 | **Sinh viên** | student1@edu.vn | Trần Kim Liên | Thực hiện làm khảo sát dành cho Sinh viên |
 | **Sinh viên** | student2@edu.vn | Nguyễn Văn Tuấn | Thực hiện làm khảo sát dành cho Sinh viên |
 | **Giảng viên** | lecturer1@edu.vn | Phạm Giảng Viên | Thực hiện làm khảo sát dành cho Giảng viên |
