@@ -175,6 +175,32 @@ async function startServer() {
       }
     }
 
+    // Ensure at least one Admin user exists (Genesis Admin)
+    try {
+      const { User } = require('./models');
+      const adminExists = await User.findOne({ where: { roleId: 1 } });
+      if (!adminExists) {
+        console.log('No Admin account found in database. Creating genesis Admin...');
+        const bcrypt = require('bcryptjs');
+        const adminEmail = 'trankimlien31072004@gmail.com';
+        const adminPassword = '12345678';
+        const hashedPw = await bcrypt.hash(adminPassword, 10);
+        await User.create({
+          email: adminEmail,
+          password: hashedPw,
+          fullName: 'Quản trị viên Hệ thống',
+          code: 'ADMIN_01',
+          roleId: 1, // Admin
+          school: 'Trường Đại học Kiến trúc Đà Nẵng',
+          department: 'Khoa Công nghệ thông tin',
+          status: 'Active'
+        });
+        console.log(`Genesis Admin created successfully: ${adminEmail}`);
+      }
+    } catch (dbError) {
+      console.error('Error checking/creating genesis Admin account:', dbError);
+    }
+
     // Ensure at least one Manager user exists (Genesis Manager)
     try {
       const { User } = require('./models');
